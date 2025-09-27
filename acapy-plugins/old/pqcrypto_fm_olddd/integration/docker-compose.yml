@@ -1,0 +1,233 @@
+# Multi-agent integration test environment for PQCrypto_FM
+version: '3.8'
+
+services:
+  # Test Ledger
+  von-network:
+    image: ghcr.io/bcgov/von-network:py36-1.7-1
+    ports:
+      - "9000:8000"
+    environment:
+      - GENESIS_URL=http://localhost:9000/genesis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Alice Agent - Student/Holder with PQC
+  alice:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8030:8020"
+      - "8031:8021"
+    environment:
+      - ACAPY_LABEL=alice-pqc-agent
+      - ACAPY_ENDPOINT=http://alice:8020
+      - ACAPY_ADMIN=0.0.0.0:8021
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_NAME=alice_pqc_wallet
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_GENESIS_URL=http://von-network:8000/genesis
+      - ACAPY_LOG_LEVEL=info
+    volumes:
+      - ./integration.yml:/etc/acapy/config.yml
+    command: >
+      aca-py start
+      --arg-file /etc/acapy/config.yml
+      --plugin pqcrypto_fm.v1_0
+      --plugin-config-value pqcrypto_fm.v1_0.demo_algorithms.alice=Kyber768
+    depends_on:
+      von-network:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Faber Agent - University/Issuer with PQC  
+  faber:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8040:8020"
+      - "8041:8021"
+    environment:
+      - ACAPY_LABEL=faber-pqc-agent
+      - ACAPY_ENDPOINT=http://faber:8020
+      - ACAPY_ADMIN=0.0.0.0:8021
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_NAME=faber_pqc_wallet
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_GENESIS_URL=http://von-network:8000/genesis
+      - ACAPY_LOG_LEVEL=info
+    volumes:
+      - ./integration.yml:/etc/acapy/config.yml
+    command: >
+      aca-py start
+      --arg-file /etc/acapy/config.yml
+      --plugin pqcrypto_fm.v1_0
+      --plugin-config-value pqcrypto_fm.v1_0.demo_algorithms.faber=Dilithium3
+    depends_on:
+      von-network:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Acme Agent - Corporation/Verifier with PQC
+  acme:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8050:8020"
+      - "8051:8021"
+    environment:
+      - ACAPY_LABEL=acme-pqc-agent
+      - ACAPY_ENDPOINT=http://acme:8020
+      - ACAPY_ADMIN=0.0.0.0:8021
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_NAME=acme_pqc_wallet
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_GENESIS_URL=http://von-network:8000/genesis
+      - ACAPY_LOG_LEVEL=info
+    volumes:
+      - ./integration.yml:/etc/acapy/config.yml
+    command: >
+      aca-py start
+      --arg-file /etc/acapy/config.yml
+      --plugin pqcrypto_fm.v1_0
+      --plugin-config-value pqcrypto_fm.v1_0.demo_algorithms.acme=Dilithium3
+    depends_on:
+      von-network:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Performance Agent - Benchmark Testing
+  performance:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8060:8020"
+      - "8061:8021"
+    environment:
+      - ACAPY_LABEL=performance-pqc-agent
+      - ACAPY_ENDPOINT=http://performance:8020
+      - ACAPY_ADMIN=0.0.0.0:8021
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_NAME=performance_pqc_wallet
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_GENESIS_URL=http://von-network:8000/genesis
+      - ACAPY_LOG_LEVEL=warning
+      - ACAPY_TIMING=true
+    volumes:
+      - ./integration.yml:/etc/acapy/config.yml
+    command: >
+      aca-py start
+      --arg-file /etc/acapy/config.yml
+      --plugin pqcrypto_fm.v1_0
+      --plugin-config-value pqcrypto_fm.v1_0.demo_algorithms.performance=Kyber512
+    depends_on:
+      von-network:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Test Runner - Executes integration tests
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test.runner
+    environment:
+      - ALICE_ADMIN_URL=http://alice:8021
+      - FABER_ADMIN_URL=http://faber:8021
+      - ACME_ADMIN_URL=http://acme:8021
+      - PERFORMANCE_ADMIN_URL=http://performance:8021
+      - VON_NETWORK_URL=http://von-network:8000
+      - TEST_TIMEOUT=600
+      - PYTHONPATH=/usr/src
+    volumes:
+      - ./test-results:/usr/src/test-results
+      - ./coverage:/usr/src/coverage
+      - ../pqcrypto_fm:/usr/src/pqcrypto_fm:ro
+    command: >
+      bash -c "
+        echo 'Waiting for all agents to be ready...' &&
+        sleep 30 &&
+        echo 'Starting PQCrypto_FM integration tests...' &&
+        pytest -v --tb=short 
+          --cov=pqcrypto_fm 
+          --cov-report=term-missing 
+          --cov-report=html:/usr/src/coverage/
+          --cov-report=xml:/usr/src/coverage/coverage.xml
+          --timeout=300
+          --junitxml=/usr/src/test-results/junit.xml
+          /usr/src/tests/
+      "
+    depends_on:
+      alice:
+        condition: service_healthy
+      faber:
+        condition: service_healthy
+      acme:
+        condition: service_healthy
+      performance:
+        condition: service_healthy
+
+  # Test Monitor - Optional monitoring and logging
+  test-monitor:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    profiles:
+      - monitoring
+    depends_on:
+      - alice
+      - faber
+      - acme
+      - performance
+
+volumes:
+  test-results:
+  coverage:
+  prometheus-data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

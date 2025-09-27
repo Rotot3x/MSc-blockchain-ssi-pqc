@@ -1,0 +1,38 @@
+# Production ACA-Py Configuration with PQCrypto_FM
+label: pqcrypto-fm-agent
+
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: false
+admin-api-key: pqc-demo-key-2025
+
+inbound-transport: 
+  - [http, 0.0.0.0, 8020]
+outbound-transport: http
+endpoint: http://localhost:8020
+
+wallet-type: askar-anoncreds
+wallet-storage-type: default
+wallet-name: pqcrypto-fm-wallet
+auto-provision: true
+
+genesis-url: http://test.bcovrin.vonx.io/genesis
+
+plugin:
+  - pqcrypto_fm.v1_0
+
+plugin-config:
+  pqcrypto_fm.v1_0:
+    default_kem_algorithm: "Kyber768"
+    default_sig_algorithm: "Dilithium3"
+    hybrid_mode: true
+    require_pqc_for_new_connections: true
+    min_security_level: 3
+    enable_pqc_for_credentials: true
+    enable_pqc_for_proofs: true
+    use_askar_anoncreds: true
+    hardware_acceleration: true
+
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+log-level: info

@@ -1,0 +1,31 @@
+label: connection_update
+
+# Admin
+admin: [ 0.0.0.0, 3001 ]
+admin-insecure-mode: true
+# admin-api-key: change-me
+
+# Transport
+inbound-transport:
+  - [ http, 0.0.0.0, 3000 ]
+outbound-transport: http
+endpoint:
+  - http://host.docker.internal:3000
+
+# plugins
+plugin:
+  - connection_update.v1_0
+
+# Wallet
+auto-provision: true
+wallet-type: askar
+wallet-name: connection_update
+wallet-key: connection_update
+
+#config
+genesis-url: http://test.bcovrin.vonx.io/genesis
+
+log-level: info
+
+auto-accept-invites: true
+auto-respond-messages: true

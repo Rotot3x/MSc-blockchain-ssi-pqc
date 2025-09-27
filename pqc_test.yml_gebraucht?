@@ -1,0 +1,30 @@
+# PQC Test Configuration
+auto-provision: true
+label: pqc-test
+
+inbound-transport:
+   - [http, 0.0.0.0, 9040]
+
+outbound-transport: http
+
+wallet-type: askar
+wallet-storage-type: default
+wallet-name: pqc-test-wallet
+wallet-key: pqc-test-wallet-key
+
+admin-insecure-mode: true
+admin: [0.0.0.0, 9041]
+
+endpoint: http://localhost:9040
+
+genesis-url: http://localhost:9000/genesis
+
+# Connections
+debug-connections: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+
+log-level: debug
+
+# PQC Plugin configuration in command line

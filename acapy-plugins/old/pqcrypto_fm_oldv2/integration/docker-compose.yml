@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  von-network:
+    image: ghcr.io/bcgov/von-network:py36-1.7-1
+    ports: ["9000:8000"]
+    environment: [GENESIS_URL=http://localhost:9000/genesis]
+
+  alice:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports: ["8030:8020", "8031:8021"]
+    environment:
+      - ACAPY_LABEL=alice-pqc-agent
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+    depends_on: [von-network]
+
+  faber:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile  
+    ports: ["8040:8020", "8041:8021"]
+    environment:
+      - ACAPY_LABEL=faber-pqc-agent
+      - ACAPY_PLUGIN=pqcrypto_fm.v1_0
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+    depends_on: [von-network]
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test.runner
+    environment:
+      - ALICE_ADMIN_URL=http://alice:8021
+      - FABER_ADMIN_URL=http://faber:8021
+    depends_on: [alice, faber]

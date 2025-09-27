@@ -1,0 +1,131 @@
+# Production ACA-Py Configuration with PQCrypto_FM
+# Optimized for Askar-AnonCreds and quantum-safe operations
+
+label: pqcrypto-fm-agent
+
+# Core ACA-Py Settings
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: false
+admin-api-key: pqc-demo-key-2025
+
+# Network Configuration
+inbound-transport: 
+  - [http, 0.0.0.0, 8020]
+outbound-transport: http
+endpoint: http://localhost:8020
+
+# Wallet Configuration - Askar-AnonCreds (Standard)
+wallet-type: askar-anoncreds
+wallet-storage-type: default
+wallet-name: pqcrypto-fm-wallet
+auto-provision: true
+
+# Ledger Configuration (for demo)
+genesis-url: http://test.bcovrin.vonx.io/genesis
+
+# PQCrypto_FM Plugin Configuration
+plugin:
+  - pqcrypto_fm.v1_0
+
+plugin-config:
+  pqcrypto_fm.v1_0:
+    # Production NIST-standardized algorithms
+    default_kem_algorithm: "Kyber768"        # NIST Level 3 (recommended)
+    default_sig_algorithm: "Dilithium3"      # NIST Level 3 (recommended)
+    default_hash_sig_algorithm: "SPHINCS+-SHAKE-192s-simple"  # Level 3
+    
+    # Operating modes for production
+    hybrid_mode: true                        # Enable hybrid crypto
+    fallback_to_classical: false            # Quantum-safe first
+    quantum_safe_only: false                # Allow hybrid mode
+    
+    # Performance optimizations
+    hardware_acceleration: true             # Enable AVX2/AVX-512
+    key_cache_size: 2000                    # Larger cache for production
+    batch_operations: true                  # Batch crypto operations
+    
+    # Security requirements
+    require_pqc_for_new_connections: true   # Force PQC for new connections
+    min_security_level: 3                   # Require NIST Level 3+
+    enable_pqc_for_credentials: true        # PQC for credential issuance
+    enable_pqc_for_proofs: true            # PQC for proof verification
+    
+    # Wallet integration
+    use_askar_anoncreds: true              # Use Askar-AnonCreds
+    pqc_key_derivation: true               # PQC key derivation
+    
+    # Demo mode settings
+    enable_demo_mode: true                 # Enable demo integration
+    demo_algorithms:
+      faber: "Dilithium3"                  # University credential issuer
+      alice: "Kyber768"                    # Student credential holder
+      acme: "Dilithium3"                   # Corporate proof verifier
+      performance: "Kyber512"              # Performance benchmarking
+    
+    # Enabled algorithms (production subset)
+    enabled_kem_algorithms:
+      - "Kyber512"                         # Fast operations, Level 1
+      - "Kyber768"                         # Recommended, Level 3
+      - "Kyber1024"                        # Maximum security, Level 5
+    
+    enabled_sig_algorithms:
+      - "Dilithium2"                       # Fast signatures, Level 1
+      - "Dilithium3"                       # Recommended, Level 3
+      - "Dilithium5"                       # Maximum security, Level 5
+    
+    enabled_hash_sig_algorithms:
+      - "SPHINCS+-SHAKE-128s-simple"       # Level 1, fast
+      - "SPHINCS+-SHA2-128s-simple"        # Level 1, conservative
+      - "SPHINCS+-SHAKE-192s-simple"       # Level 3, recommended
+      - "SPHINCS+-SHA2-192s-simple"        # Level 3, conservative
+
+# DIDComm Configuration
+emit-new-didcomm-prefix: true
+didcomm-prefix: https://didcomm.org
+
+# Auto-accept settings for demo
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-messages: true
+auto-respond-credential-proposal: true
+auto-respond-credential-offer: true
+auto-respond-credential-request: true
+auto-respond-presentation-proposal: true
+auto-respond-presentation-request: true
+
+# Logging Configuration
+log-level: info
+log-config: |
+  version: 1
+  formatters:
+    default:
+      format: '%(asctime)s %(levelname)s [%(name)s] %(message)s'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: default
+      stream: ext://sys.stdout
+  loggers:
+    pqcrypto_fm:
+      level: INFO
+      handlers: [console]
+    aries_cloudagent:
+      level: INFO
+      handlers: [console]
+  root:
+    level: WARNING
+    handlers: [console]
+
+# Additional settings for production
+debug-connections: false
+debug-credentials: false  
+debug-presentations: false
+monitor-ping: true
+public-invites: true
+timing: true
+trace: false
+
+# Multitenant settings (if needed)
+multitenant: false
+jwt-secret: pqc-jwt-secret-change-in-production

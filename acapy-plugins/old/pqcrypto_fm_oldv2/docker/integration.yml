@@ -1,0 +1,28 @@
+# Integration Test Configuration
+label: pqcrypto-fm-integration-test
+
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: true
+inbound-transport: 
+  - [http, 0.0.0.0, 8020]
+outbound-transport: http
+endpoint: http://localhost:8020
+
+wallet-type: askar-anoncreds
+wallet-storage-type: default
+auto-provision: true
+
+plugin:
+  - pqcrypto_fm.v1_0
+
+plugin-config:
+  pqcrypto_fm.v1_0:
+    enable_demo_mode: true
+    hybrid_mode: true
+    fallback_to_classical: true
+    min_security_level: 1
+
+auto-accept-invites: true
+auto-accept-requests: true
+debug-connections: true
+log-level: debug

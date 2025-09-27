@@ -1,0 +1,99 @@
+# Integration test container for PQCrypto_FM
+FROM ghcr.io/openwallet-foundation/acapy:py3.12-1.3-lts
+
+# Test metadata
+LABEL maintainer="OpenWallet Foundation <info@openwallet.foundation>"
+LABEL description="PQCrypto_FM Integration Test Runner"
+LABEL version="1.0.0"
+
+USER root
+
+# Install system dependencies for testing
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    ninja-build \
+    libssl-dev \
+    pkg-config \
+    curl \
+    jq \
+    # Testing utilities
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install liboqs for testing
+ARG LIBOQS_VERSION=0.10.1
+RUN git clone --branch=${LIBOQS_VERSION} --depth=1 \
+    https://github.com/open-quantum-safe/liboqs.git /tmp/liboqs \
+    && cmake -S /tmp/liboqs -B /tmp/liboqs/build \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DOQS_ENABLE_KEM_KYBER=ON \
+        -DOQS_ENABLE_SIG_DILITHIUM=ON \
+        -DOQS_ENABLE_SIG_SPHINCS=ON \
+        -DOQS_USE_OPENSSL=ON \
+        -GNinja \
+    && cmake --build /tmp/liboqs/build --parallel $(nproc) \
+    && cmake --build /tmp/liboqs/build --target install \
+    && ldconfig \
+    && rm -rf /tmp/liboqs
+
+# Set up Python environment for testing
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel poetry
+
+# Copy test configuration
+COPY pyproject.toml poetry.lock ./
+
+# Install test dependencies
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-dev
+
+# Install PQC dependencies
+RUN pip install --no-cache-dir \
+    liboqs-python>=0.12.0 \
+    pqcrypto>=0.3.0 \
+    pytest>=7.4.0 \
+    pytest-asyncio>=0.21.0 \
+    pytest-cov>=4.1.0 \
+    pytest-mock>=3.11.0 \
+    pytest-timeout>=2.1.0
+
+# Copy plugin source
+COPY ../pqcrypto_fm /usr/src/pqcrypto_fm
+
+# Install plugin in development mode
+RUN pip install -e /usr/src/pqcrypto_fm
+
+# Copy test files
+COPY tests/ /usr/src/tests/
+
+# Create test directories
+RUN mkdir -p /usr/src/test-results \
+    && mkdir -p /usr/src/coverage
+
+# Set working directory
+WORKDIR /usr/src
+
+# Switch back to acapy user
+USER $user
+
+# Environment variables for testing
+ENV PYTHONPATH=/usr/src:/usr/src/pqcrypto_fm
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+ENV OQS_CPU_EXTENSIONS=auto
+
+# Test health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=2 \
+  CMD python -c "import oqs; print('liboqs available')" && \
+      python -c "import pqcrypto_fm; print('plugin importable')" || exit 1
+
+# Default command runs all tests
+CMD ["pytest", "-v", "--tb=short", \
+     "--cov=pqcrypto_fm", \
+     "--cov-report=term-missing", \
+     "--cov-report=html:/usr/src/coverage/", \
+     "--cov-report=xml:/usr/src/coverage/coverage.xml", \
+     "--timeout=300", \
+     "/usr/src/tests/"]

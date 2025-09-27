@@ -1,0 +1,91 @@
+# Integration Test Configuration for PQCrypto_FM
+# Used for comprehensive testing of PQC functionality
+
+label: pqcrypto-fm-integration-test
+
+# Test-specific settings
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: true  # OK for testing
+inbound-transport: 
+  - [http, 0.0.0.0, 8020]
+outbound-transport: http
+endpoint: http://localhost:8020
+
+# Test wallet (ephemeral)
+wallet-type: askar-anoncreds
+wallet-storage-type: default
+auto-provision: true
+
+# Test ledger  
+genesis-url: http://test.bcovrin.vonx.io/genesis
+
+# PQCrypto_FM Plugin - Test Configuration
+plugin:
+  - pqcrypto_fm.v1_0
+
+plugin-config:
+  pqcrypto_fm.v1_0:
+    # Test with all algorithm levels
+    default_kem_algorithm: "Kyber768"
+    default_sig_algorithm: "Dilithium3"
+    
+    # Test modes
+    hybrid_mode: true
+    fallback_to_classical: true  # Allow fallback in tests
+    quantum_safe_only: false
+    
+    # Performance settings for testing
+    hardware_acceleration: false  # Ensure compatibility
+    key_cache_size: 100
+    batch_operations: true
+    
+    # Relaxed security for testing
+    require_pqc_for_new_connections: false
+    min_security_level: 1  # Test all security levels
+    enable_pqc_for_credentials: true
+    enable_pqc_for_proofs: true
+    
+    # Enable demo mode for integration tests
+    enable_demo_mode: true
+    demo_algorithms:
+      alice: "Kyber512"      # Fast for testing
+      faber: "Dilithium2"    # Fast signatures
+      acme: "Dilithium2"     # Fast verification
+      performance: "Kyber512" # Performance tests
+    
+    # Enable all algorithms for comprehensive testing
+    enabled_kem_algorithms:
+      - "Kyber512"
+      - "Kyber768" 
+      - "Kyber1024"
+    
+    enabled_sig_algorithms:
+      - "Dilithium2"
+      - "Dilithium3"
+      - "Dilithium5"
+    
+    enabled_hash_sig_algorithms:
+      - "SPHINCS+-SHAKE-128s-simple"
+      - "SPHINCS+-SHA2-128s-simple"
+
+# Auto-accept everything for testing
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-messages: true
+auto-respond-credential-proposal: true
+auto-respond-credential-offer: true
+auto-respond-credential-request: true
+auto-respond-presentation-proposal: true
+auto-respond-presentation-request: true
+
+# Debug settings for testing
+debug-connections: true
+debug-credentials: true
+debug-presentations: true
+log-level: debug
+
+# Timing and monitoring
+timing: true
+monitor-ping: false
+trace: true

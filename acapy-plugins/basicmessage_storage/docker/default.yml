@@ -1,0 +1,31 @@
+label: basicmessage_storage
+
+# Admin
+admin: [ 0.0.0.0, 3001 ]
+admin-insecure-mode: true
+
+# Transport
+inbound-transport:
+  - [ http, 0.0.0.0, 3000 ]
+  - [ ws, 0.0.0.0, 3002 ]
+outbound-transport: http
+endpoint:
+  - http://host.docker.internal:3000
+
+# plugins
+plugin:
+  - basicmessage_storage.v1_0
+
+#config
+genesis-url: http://test.bcovrin.vonx.io/genesis
+
+# Wallet
+wallet-type: askar
+wallet-name: basicmessage_storage
+wallet-key: basicmessage_storage
+
+log-level: info
+auto-provision: true
+
+auto-accept-invites: true
+auto-respond-messages: true

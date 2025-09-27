@@ -1,0 +1,137 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "pqcrypto-fm"
+version = "1.0.0"
+description = "Post-Quantum Cryptography Plugin for ACA-Py - Future Mode"
+authors = ["OpenWallet Foundation <info@openwallet.foundation>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/openwallet-foundation/acapy-plugins"
+repository = "https://github.com/openwallet-foundation/acapy-plugins"
+documentation = "https://plugins.aca-py.org"
+keywords = ["aries", "acapy", "post-quantum", "cryptography", "ssi", "quantum-safe"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10", 
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+]
+packages = [
+    { include = "pqcrypto_fm" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+aries-cloudagent = ">=1.0.0"
+liboqs-python = ">=0.12.0"
+pqcrypto = ">=0.3.0"
+cryptography = ">=41.0.0"
+aiohttp = ">=3.8.0"
+marshmallow = ">=3.18.0"
+marshmallow-dataclass = ">=8.5.0"
+base58 = ">=2.1.0"
+pynacl = ">=1.5.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pytest-cov = "^4.1.0"
+pytest-mock = "^3.11.0"
+black = "^23.0.0"
+flake8 = "^6.0.0"
+mypy = "^1.5.0"
+isort = "^5.12.0"
+pre-commit = "^3.3.0"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "--cov=pqcrypto_fm --cov-report=term-missing --cov-report=html --cov-report=xml"
+markers = [
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "pqc: marks tests requiring PQC algorithms",
+]
+
+[tool.black]
+line-length = 90
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 90
+multi_line_output = 3
+skip = [".gitignore", ".dockerignore"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "oqs.*",
+    "pqcrypto.*",
+    "aries_cloudagent.*",
+    "base58.*",
+    "nacl.*",
+]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["pqcrypto_fm"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
