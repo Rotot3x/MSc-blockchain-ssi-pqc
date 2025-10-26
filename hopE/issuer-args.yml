@@ -1,0 +1,75 @@
+# ACA-Py Configuration for Issuer Agent
+# Based on demo/demo-args.yaml structure
+
+# Label für den Agenten
+label: "Issuer Agent"
+
+# Inbound Transport (wird bereits über command line gesetzt, hier zur Referenz)
+# inbound-transport:
+#   - [http, 0.0.0.0, 8020]
+
+# Outbound Transport
+outbound-transport: http
+
+# Admin API Einstellungen
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: true
+
+# Genesis und Ledger
+# genesis-url wird über Umgebungsvariable gesetzt
+
+# Wallet Einstellungen
+wallet-type: askar
+wallet-name: issuer_wallet
+# wallet-key wird über Umgebungsvariable gesetzt
+# wallet-storage-type und credentials werden über Umgebungsvariablen gesetzt
+
+# Auto-Accept Einstellungen (Issuer)
+auto-provision: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-credential-proposal: true
+auto-respond-credential-offer: true
+auto-respond-credential-request: true
+auto-store-credential: false
+auto-respond-presentation-proposal: false
+auto-respond-presentation-request: false
+auto-verify-presentation: true
+
+# Public Invites
+public-invites: true
+invite-public: true
+
+# Endpoint URL
+# endpoint wird über Umgebungsvariable gesetzt
+
+# Log Level
+# log-level wird über Umgebungsvariable gesetzt
+
+# Webhook URL
+# webhook-url wird über Umgebungsvariable gesetzt
+
+# Tails Server (für Revocation)
+# tails-server-base-url wird über Umgebungsvariable gesetzt
+
+# Trace Settings (optional, für Debugging)
+# trace: true
+# trace-target: log
+# trace-tag: acapy.issuer
+
+# Debug Modus (optional)
+# debug-connections: true
+# debug-credentials: true
+# debug-presentations: true
+
+# Protokoll-Versionen
+# emit-new-didcomm-prefix: true
+# emit-new-didcomm-mime-type: true
+
+# Monitor für Webhook Events (optional)
+# monitor-ping: true
+
+# Timing Information (optional, für Performance-Analyse)
+# timing: true
+# timing-log: ./timing.log

@@ -1,0 +1,268 @@
+version: '3.8'
+
+# cheqd-node + ACA-Py SSI Integration
+# Simplified Single-Node Setup for Testing
+# Architecture: 1 cheqd validator + 3 ACA-Py agents + DID services
+
+services:
+  #############################################################################
+  # cheqd-node Single Validator (Simplified)
+  #############################################################################
+
+  cheqd-node:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-node
+    ports:
+      - "26656:26656"  # P2P
+      - "26657:26657"  # RPC
+      - "1317:1317"    # REST API
+      - "9090:9090"    # gRPC
+      - "9091:9091"    # gRPC-Gateway
+    entrypoint: ["/init-cheqd.sh"]
+    volumes:
+      - cheqd-node-data:/root/.cheqdnode
+      - ./scripts/init-cheqd.sh:/init-cheqd.sh:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:26657/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - cheqd-ssi-network
+
+  #############################################################################
+  # DID Resolver & Registrar Services
+  #############################################################################
+
+  did-resolver:
+    image: ghcr.io/cheqd/did-resolver:latest
+    container_name: cheqd-did-resolver
+    ports:
+      - "8080:8080"
+    environment:
+      - MAINNET_ENDPOINT=cheqd-node:9090,false,5s
+      - TESTNET_ENDPOINT=cheqd-node:9090,false,5s
+      - LOG_LEVEL=info
+      - RESOLVER_LISTENER=0.0.0.0:8080
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      cheqd-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/1.0/identifiers/did:cheqd:testnet:zF7rhDBfUt9d1gJPjx7s1J"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  did-registrar:
+    image: universalregistrar/uni-registrar-web:latest
+    container_name: cheqd-did-registrar
+    ports:
+      - "9080:9080"
+    environment:
+      - uniregistrar_driver_did_cheqd_url=http://did-registrar-driver:3000
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - did-registrar-driver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/1.0/methods"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  did-registrar-driver:
+    image: ghcr.io/cheqd/did-registrar:production-latest
+    container_name: cheqd-did-registrar-driver
+    ports:
+      - "3000:3000"
+    environment:
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC:-sketch mountain erode window enact net enrich smoke claim kangaroo another visual write meat latin bacon pulp similar forum guilt father state erase bright}
+      - FEE_PAYER_MAINNET_MNEMONIC=${FEE_PAYER_MAINNET_MNEMONIC}
+      - TESTNET_RPC_ENDPOINT=http://cheqd-node:26657
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      cheqd-node:
+        condition: service_healthy
+
+  #############################################################################
+  # PostgreSQL Database for ACA-Py Wallets
+  #############################################################################
+
+  postgres-acapy:
+    image: postgres:15-alpine
+    container_name: postgres-acapy
+    environment:
+      - POSTGRES_USER=acapy
+      - POSTGRES_PASSWORD=acapy_secret
+      - POSTGRES_DB=acapy_wallets
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-acapy-data:/var/lib/postgresql/data
+      - ./scripts/init-wallets.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cheqd-ssi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acapy -d acapy_wallets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #############################################################################
+  # ACA-Py Agent: Issuer (Simplified - without plugins for now)
+  #############################################################################
+
+  acapy-issuer:
+    image: ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.1
+    container_name: acapy-issuer
+    ports:
+      - "8020:8020"  # Inbound transport
+      - "8021:8021"  # Admin API
+    command: >
+      start
+        --label "SSI Issuer on cheqd"
+        --inbound-transport http 0.0.0.0 8020
+        --outbound-transport http
+        --endpoint http://localhost:8020
+        --admin 0.0.0.0 8021
+        --admin-insecure-mode
+        --wallet-type askar-anoncreds
+        --wallet-name issuer_wallet
+        --wallet-key issuer_wallet_key_secure_2024
+        --wallet-storage-type postgres_storage
+        --wallet-storage-config '{"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}'
+        --wallet-storage-creds '{"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}'
+        --auto-provision
+        --no-ledger
+        --auto-accept-invites
+        --auto-accept-requests
+        --auto-ping-connection
+        --auto-respond-messages
+        --auto-respond-credential-proposal
+        --auto-respond-credential-offer
+        --auto-respond-credential-request
+        --auto-verify-presentation
+        --auto-store-credential
+        --preserve-exchange-records
+        --log-level info
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  #############################################################################
+  # ACA-Py Agent: Holder
+  #############################################################################
+
+  acapy-holder:
+    image: ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.1
+    container_name: acapy-holder
+    ports:
+      - "8030:8030"  # Inbound transport
+      - "8031:8031"  # Admin API
+    command: >
+      start
+        --label "SSI Holder on cheqd"
+        --inbound-transport http 0.0.0.0 8030
+        --outbound-transport http
+        --endpoint http://localhost:8030
+        --admin 0.0.0.0 8031
+        --admin-insecure-mode
+        --wallet-type askar-anoncreds
+        --wallet-name holder_wallet
+        --wallet-key holder_wallet_key_secure_2024
+        --wallet-storage-type postgres_storage
+        --wallet-storage-config '{"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}'
+        --wallet-storage-creds '{"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}'
+        --auto-provision
+        --no-ledger
+        --auto-accept-invites
+        --auto-accept-requests
+        --auto-ping-connection
+        --auto-respond-messages
+        --auto-respond-credential-proposal
+        --auto-respond-credential-offer
+        --auto-respond-credential-request
+        --auto-store-credential
+        --preserve-exchange-records
+        --log-level info
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  #############################################################################
+  # ACA-Py Agent: Verifier
+  #############################################################################
+
+  acapy-verifier:
+    image: ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.1
+    container_name: acapy-verifier
+    ports:
+      - "8040:8040"  # Inbound transport
+      - "8041:8041"  # Admin API
+    command: >
+      start
+        --label "SSI Verifier on cheqd"
+        --inbound-transport http 0.0.0.0 8040
+        --outbound-transport http
+        --endpoint http://localhost:8040
+        --admin 0.0.0.0 8041
+        --admin-insecure-mode
+        --wallet-type askar-anoncreds
+        --wallet-name verifier_wallet
+        --wallet-key verifier_wallet_key_secure_2024
+        --wallet-storage-type postgres_storage
+        --wallet-storage-config '{"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}'
+        --wallet-storage-creds '{"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}'
+        --auto-provision
+        --no-ledger
+        --auto-accept-invites
+        --auto-accept-requests
+        --auto-ping-connection
+        --auto-respond-messages
+        --auto-verify-presentation
+        --preserve-exchange-records
+        --log-level info
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  cheqd-ssi-network:
+    name: cheqd-ssi-network
+    driver: bridge
+
+volumes:
+  # cheqd-node volume
+  cheqd-node-data:
+
+  # Database volume
+  postgres-acapy-data:

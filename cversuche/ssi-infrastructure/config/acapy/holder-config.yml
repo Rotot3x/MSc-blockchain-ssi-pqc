@@ -1,0 +1,128 @@
+# ACA-Py Holder Agent Configuration
+# Role: Hold and present verifiable credentials
+# Classic cryptography (Ed25519) - No PQC
+
+label: "SSI Holder Agent on cheqd"
+auto-provision: true
+
+#############################################################################
+# Plugins Configuration
+#############################################################################
+
+plugin:
+  - cheqd
+
+# Plugin configuration file with resolver/registrar URLs
+plugin-config: /home/aries/plugin-config.yml
+
+# Plugin directory for locally mounted plugins
+plugin-dir: /plugins
+
+#############################################################################
+# Transport Configuration
+#############################################################################
+
+inbound-transport:
+  - [http, 0.0.0.0, 8030]
+  - [ws, 0.0.0.0, 8032]
+
+outbound-transport: http
+
+endpoint:
+  - http://acapy-holder:8030
+  - ws://acapy-holder:8032
+
+#############################################################################
+# Admin API Configuration
+#############################################################################
+
+admin: [0.0.0.0, 8031]
+admin-insecure-mode: true
+
+#############################################################################
+# Wallet Configuration (Askar-AnonCreds with PostgreSQL)
+#############################################################################
+
+wallet-name: holder_wallet
+wallet-type: askar-anoncreds
+wallet-key: holder_wallet_key_secure_2024
+wallet-storage-type: postgres_storage
+
+# Note: Storage config/creds are set via environment variables in docker-compose
+
+#############################################################################
+# Ledger Configuration (cheqd network)
+#############################################################################
+
+# No traditional Indy ledger needed - using cheqd via plugin
+no-ledger: true
+
+#############################################################################
+# Connection & Credential Settings
+#############################################################################
+
+# Connection Settings
+debug-connections: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-messages: true
+monitor-ping: true
+
+# Credential Settings
+debug-credentials: true
+auto-store-credential: true
+auto-respond-credential-proposal: true
+auto-respond-credential-offer: true
+auto-respond-credential-request: true
+preserve-exchange-records: true
+
+# Presentation Settings
+debug-presentations: true
+auto-respond-presentation-proposal: true
+auto-respond-presentation-request: true
+auto-verify-presentation: true
+
+#############################################################################
+# Revocation Configuration
+#############################################################################
+
+monitor-revocation-notification: true
+notify-revocation: true
+
+#############################################################################
+# Logging Configuration
+#############################################################################
+
+log-level: info
+log-file: /tmp/holder.log
+
+#############################################################################
+# Performance & Security Settings
+#############################################################################
+
+# Emit new DIDs using Ed25519 keys by default
+create-revocation-transactions: false
+
+# WebSocket keepalive
+ws-heartbeat: 30
+ws-timeout: 60
+
+# Connection invitation settings
+public-invites: true
+requests-through-public-did: true
+
+#############################################################################
+# Protocol Settings
+#############################################################################
+
+# Enable all supported protocols by default
+emit-new-didcomm-prefix: true
+emit-new-didcomm-mime-type: true
+
+#############################################################################
+# cheqd DID Method Configuration
+#############################################################################
+
+# Enable did:cheqd method
+# URLs are configured via plugin-config.yml file

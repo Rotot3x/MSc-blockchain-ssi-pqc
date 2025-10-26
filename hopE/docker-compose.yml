@@ -1,0 +1,288 @@
+version: '3.8'
+
+services:
+  # Issuer Agent (entspricht Faber aus den Demos)
+  issuer:
+    build:
+      context: ..
+      dockerfile: hopE/Dockerfile.acapy-base-pqc
+    image: acapy-base-pqc
+    container_name: issuer-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-https://host.docker.internal:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-https://host.docker.internal:8000}
+      - PUBLIC_TAILS_URL=https://host.docker.internal:6543
+      - TAILS_FILE_COUNT=100
+    networks:
+      - hope-issuer
+    volumes:
+      - issuer-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Issuer Agent"
+      --inbound-transport http 0.0.0.0 8020
+      --outbound-transport http
+      --endpoint https://host.docker.internal:8020
+      --admin 0.0.0.0 8021
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name issuer_wallet
+      --wallet-key issuer_wallet_key_000000000000
+      --genesis-url https://host.docker.internal:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-respond-credential-proposal
+      --auto-respond-credential-offer
+      --auto-respond-credential-request
+      --auto-verify-presentation
+      --public-invites
+      --preserve-exchange-records
+      --tails-server-base-url https://host.docker.internal:6543
+      --notify-revocation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Holder Agent (entspricht Alice aus den Demos)
+  holder:
+    build:
+      context: ..
+      dockerfile: hopE/Dockerfile.acapy-base-pqc
+    image: acapy-base-pqc
+    container_name: holder-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-https://host.docker.internal:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-https://host.docker.internal:8000}
+      - PUBLIC_TAILS_URL=https://host.docker.internal:6543
+    networks:
+      - hope-holder
+    volumes:
+      - holder-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Holder Agent"
+      --inbound-transport http 0.0.0.0 8030
+      --outbound-transport http
+      --endpoint https://host.docker.internal:8030
+      --admin 0.0.0.0 8031
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name holder_wallet
+      --wallet-key holder_wallet_key_000000000000
+      --genesis-url https://host.docker.internal:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-respond-credential-offer
+      --auto-store-credential
+      --public-invites
+      --tails-server-base-url https://host.docker.internal:6543
+      --preserve-exchange-records
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Verifier Agent (entspricht Acme aus den Demos)
+  verifier:
+    build:
+      context: ..
+      dockerfile: hopE/Dockerfile.acapy-base-pqc
+    image: acapy-base-pqc
+    container_name: verifier-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-https://host.docker.internal:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-https://host.docker.internal:8000}
+      - PUBLIC_TAILS_URL=https://host.docker.internal:6543
+    networks:
+      - hope-verifier
+    volumes:
+      - verifier-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Verifier Agent"
+      --inbound-transport http 0.0.0.0 8040
+      --outbound-transport http
+      --endpoint https://host.docker.internal:8040
+      --admin 0.0.0.0 8041
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name verifier_wallet
+      --wallet-key verifier_wallet_key_00000000000
+      --genesis-url https://host.docker.internal:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-verify-presentation
+      --public-invites
+      --tails-server-base-url https://host.docker.internal:6543
+      --preserve-exchange-records
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Post-Quantum Nginx Reverse Proxy für Issuer Agent
+  pqc-reverseproxy-issuer:
+    build:
+      context: ./pqc_reverseproxy_nginx
+      dockerfile: Dockerfile
+      args:
+        OPENSSL_TAG: openssl-3.5.4
+        LIBOQS_TAG: 0.13.0
+        OQSPROVIDER_TAG: 0.9.0
+        NGINX_VERSION: 1.28.0
+        SIG_ALG: mldsa65
+        DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
+    container_name: pqc-reverseproxy-issuer
+    environment:
+      # OpenSSL Configuration
+      - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
+      # Post-Quantum Key Exchange Groups
+      - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
+    networks:
+      - von_reverseproxy
+      - hope-issuer
+    ports:
+      - "8020:8020"  # Issuer Inbound Transport HTTPS (ML-KEM-768)
+      - "8021:8021"  # Issuer Admin API HTTPS (ML-KEM-768)
+    volumes:
+      # Custom nginx configuration for reverse proxy
+      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_issuer.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      # Custom ML-DSA-65 certificates
+      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      # Logs
+      - nginx-logs:/opt/nginx/logs
+    depends_on:
+      - issuer
+      - holder
+      - verifier
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:8021/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+ # Post-Quantum Nginx Reverse Proxy für Holder Agent
+  pqc-reverseproxy-holder:
+    build:
+      context: ./pqc_reverseproxy_nginx
+      dockerfile: Dockerfile
+      args:
+        OPENSSL_TAG: openssl-3.5.4
+        LIBOQS_TAG: 0.13.0
+        OQSPROVIDER_TAG: 0.9.0
+        NGINX_VERSION: 1.28.0
+        SIG_ALG: mldsa65
+        DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
+    container_name: pqc-reverseproxy-holder
+    environment:
+      # OpenSSL Configuration
+      - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
+      # Post-Quantum Key Exchange Groups
+      - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
+    networks:
+      - von_reverseproxy
+      - hope-holder
+    ports:
+      - "8030:8030"  # Holder Inbound Transport HTTPS (ML-KEM-768)
+      - "8031:8031"  # Holder Admin API HTTPS (ML-KEM-768)
+    volumes:
+      # Custom nginx configuration for reverse proxy
+      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_holder.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      # Custom ML-DSA-65 certificates
+      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      # Logs
+      - nginx-logs:/opt/nginx/logs
+    depends_on:
+      - issuer
+      - holder
+      - verifier
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:8031/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+ # Post-Quantum Nginx Reverse Proxy für Verifier Agent
+  pqc-reverseproxy-verifier:
+    build:
+      context: ./pqc_reverseproxy_nginx
+      dockerfile: Dockerfile
+      args:
+        OPENSSL_TAG: openssl-3.5.4
+        LIBOQS_TAG: 0.13.0
+        OQSPROVIDER_TAG: 0.9.0
+        NGINX_VERSION: 1.28.0
+        SIG_ALG: mldsa65
+        DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
+    container_name: pqc-reverseproxy-verifier
+    environment:
+      # OpenSSL Configuration
+      - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
+      # Post-Quantum Key Exchange Groups
+      - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
+    networks:
+      - von_reverseproxy
+      - hope-verifier
+    ports:
+      - "8040:8040"  # Verifier Inbound Transport HTTPS (ML-KEM-768)
+      - "8041:8041"  # Verifier Admin API HTTPS (ML-KEM-768)
+    volumes:
+      # Custom nginx configuration for reverse proxy
+      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_verifier.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      # Custom ML-DSA-65 certificates
+      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      # Logs
+      - nginx-logs:/opt/nginx/logs
+    depends_on:
+      - issuer
+      - holder
+      - verifier
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:8041/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+networks:
+  hope-issuer:
+  hope-holder:
+  hope-verifier:
+  von_reverseproxy:
+    external: true
+
+volumes:
+  issuer-data:
+  holder-data:
+  verifier-data:
+  nginx-logs:

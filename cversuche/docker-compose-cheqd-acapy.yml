@@ -1,0 +1,371 @@
+version: '3.8'
+
+# cheqd-node + ACA-Py SSI Integration
+# Complete Self-Sovereign Identity workflow with Post-Quantum Cryptography
+# Architecture: cheqd localnet (4 validators, 1 seed, 1 observer) + 3 ACA-Py agents
+
+services:
+  #############################################################################
+  # cheqd-node Localnet Infrastructure (6 nodes)
+  #############################################################################
+
+  cheqd-validator-0:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-validator-0
+    ports:
+      - "26656:26656"  # P2P
+      - "26657:26657"  # RPC
+      - "1317:1317"    # REST API
+      - "9090:9090"    # gRPC
+      - "9091:9091"    # gRPC-Gateway
+    environment:
+      - CHEQD_NODED_MONIKER=validator-0
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_API_ENABLE=true
+      - CHEQD_NODED_MINIMUM_GAS_PRICES=25ncheq
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-validator-0-data:/home/cheqd
+      - ./cheqd-node/docker/localnet/network-config/genesis.json:/home/cheqd/.cheqdnode/config/genesis.json:ro
+      - ./cheqd-node/docker/localnet/network-config/validator-0/config:/home/cheqd/.cheqdnode/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:26657/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cheqd-ssi-network
+
+  cheqd-validator-1:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-validator-1
+    ports:
+      - "26756:26656"
+      - "26757:26657"
+      - "1417:1317"
+      - "9190:9090"
+      - "9191:9091"
+    environment:
+      - CHEQD_NODED_MONIKER=validator-1
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_API_ENABLE=true
+      - CHEQD_NODED_MINIMUM_GAS_PRICES=25ncheq
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-validator-1-data:/home/cheqd
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - cheqd-validator-0
+
+  cheqd-validator-2:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-validator-2
+    ports:
+      - "26856:26656"
+      - "26857:26657"
+      - "1517:1317"
+      - "9290:9090"
+      - "9291:9091"
+    environment:
+      - CHEQD_NODED_MONIKER=validator-2
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_API_ENABLE=true
+      - CHEQD_NODED_MINIMUM_GAS_PRICES=25ncheq
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-validator-2-data:/home/cheqd
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - cheqd-validator-0
+
+  cheqd-validator-3:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-validator-3
+    ports:
+      - "26956:26656"
+      - "26957:26657"
+      - "1617:1317"
+      - "9390:9090"
+      - "9391:9091"
+    environment:
+      - CHEQD_NODED_MONIKER=validator-3
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_API_ENABLE=true
+      - CHEQD_NODED_MINIMUM_GAS_PRICES=25ncheq
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-validator-3-data:/home/cheqd
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - cheqd-validator-0
+
+  cheqd-seed-0:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-seed-0
+    ports:
+      - "27056:26656"
+      - "27057:26657"
+    environment:
+      - CHEQD_NODED_MONIKER=seed-0
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-seed-0-data:/home/cheqd
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - cheqd-validator-0
+
+  cheqd-observer-0:
+    image: ghcr.io/cheqd/cheqd-node:latest
+    container_name: cheqd-observer-0
+    ports:
+      - "27156:26656"
+      - "27157:26657"
+    environment:
+      - CHEQD_NODED_MONIKER=observer-0
+      - CHEQD_NODED_CHAIN_ID=cheqd-local
+      - CHEQD_NODED_RPC_LADDR=tcp://0.0.0.0:26657
+    volumes:
+      - cheqd-observer-0-data:/home/cheqd
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - cheqd-validator-0
+
+  #############################################################################
+  # DID Resolver & Registrar Services
+  #############################################################################
+
+  did-resolver:
+    image: ghcr.io/cheqd/did-resolver:latest
+    container_name: cheqd-did-resolver
+    ports:
+      - "8080:8080"
+    environment:
+      - MAINNET_ENDPOINT=cheqd-validator-0:9090,false,5s
+      - TESTNET_ENDPOINT=cheqd-validator-0:9090,false,5s
+      - LOG_LEVEL=info
+      - RESOLVER_LISTENER=0.0.0.0:8080
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      cheqd-validator-0:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/1.0/identifiers/did:cheqd:testnet:zF7rhDBfUt9d1gJPjx7s1J"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  did-registrar:
+    image: universalregistrar/uni-registrar-web:latest
+    container_name: cheqd-did-registrar
+    ports:
+      - "9080:9080"
+    environment:
+      - uniregistrar_driver_did_cheqd_url=http://did-registrar-driver:3000
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      - did-registrar-driver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/1.0/methods"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  did-registrar-driver:
+    image: ghcr.io/cheqd/did-registrar:production-latest
+    container_name: cheqd-did-registrar-driver
+    ports:
+      - "3000:3000"
+    environment:
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC:-sketch mountain erode window enact net enrich smoke claim kangaroo another visual write meat latin bacon pulp similar forum guilt father state erase bright}
+      - FEE_PAYER_MAINNET_MNEMONIC=${FEE_PAYER_MAINNET_MNEMONIC}
+      - TESTNET_RPC_ENDPOINT=http://cheqd-validator-0:26657
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      cheqd-validator-0:
+        condition: service_healthy
+
+  #############################################################################
+  # PostgreSQL Database for ACA-Py Wallets
+  #############################################################################
+
+  postgres-acapy:
+    image: postgres:15-alpine
+    container_name: postgres-acapy
+    environment:
+      - POSTGRES_USER=acapy
+      - POSTGRES_PASSWORD=acapy_secret
+      - POSTGRES_DB=acapy_wallets
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-acapy-data:/var/lib/postgresql/data
+      - ./scripts/init-wallets.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cheqd-ssi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acapy -d acapy_wallets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  #############################################################################
+  # ACA-Py Agent: Issuer (with PQC + cheqd plugins)
+  #############################################################################
+
+  acapy-issuer:
+    image: ghcr.io/openwallet-foundation/acapy:py3.12-1.1.0
+    container_name: acapy-issuer
+    ports:
+      - "8020:8020"  # Inbound transport
+      - "8021:8021"  # Admin API
+    environment:
+      - ACAPY_LABEL=PQC Quantum-Safe Issuer on cheqd
+      - ACAPY_WALLET_NAME=issuer_wallet
+      - ACAPY_WALLET_KEY=issuer_wallet_key_secure_2024
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_STORAGE_TYPE=postgres_storage
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}
+      - ACAPY_ENDPOINT=http://acapy-issuer:8020
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_LOG_LEVEL=info
+      - PYTHONPATH=/app/plugins
+    volumes:
+      - ./config/issuer-config.yml:/app/config.yml:ro
+      - ./config/cheqd-plugin-config.yml:/app/cheqd-config.yml:ro
+      - ./config/pqc-plugin-config.yml:/app/pqc-config.yml:ro
+      - ./acapy-plugins:/app/plugins:ro
+    command: >
+      start --arg-file /app/config.yml
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+      did-registrar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  #############################################################################
+  # ACA-Py Agent: Holder
+  #############################################################################
+
+  acapy-holder:
+    image: ghcr.io/openwallet-foundation/acapy:py3.12-1.1.0
+    container_name: acapy-holder
+    ports:
+      - "8030:8030"  # Inbound transport
+      - "8031:8031"  # Admin API
+    environment:
+      - ACAPY_LABEL=PQC Quantum-Safe Holder on cheqd
+      - ACAPY_WALLET_NAME=holder_wallet
+      - ACAPY_WALLET_KEY=holder_wallet_key_secure_2024
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_STORAGE_TYPE=postgres_storage
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}
+      - ACAPY_ENDPOINT=http://acapy-holder:8030
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_LOG_LEVEL=info
+      - PYTHONPATH=/app/plugins
+    volumes:
+      - ./config/holder-config.yml:/app/config.yml:ro
+      - ./config/cheqd-plugin-config.yml:/app/cheqd-config.yml:ro
+      - ./config/pqc-plugin-config.yml:/app/pqc-config.yml:ro
+      - ./acapy-plugins:/app/plugins:ro
+    command: >
+      start --arg-file /app/config.yml
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  #############################################################################
+  # ACA-Py Agent: Verifier
+  #############################################################################
+
+  acapy-verifier:
+    image: ghcr.io/openwallet-foundation/acapy:py3.12-1.1.0
+    container_name: acapy-verifier
+    ports:
+      - "8040:8040"  # Inbound transport
+      - "8041:8041"  # Admin API
+    environment:
+      - ACAPY_LABEL=PQC Quantum-Safe Verifier on cheqd
+      - ACAPY_WALLET_NAME=verifier_wallet
+      - ACAPY_WALLET_KEY=verifier_wallet_key_secure_2024
+      - ACAPY_WALLET_TYPE=askar-anoncreds
+      - ACAPY_WALLET_STORAGE_TYPE=postgres_storage
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"acapy_secret","admin_account":"acapy","admin_password":"acapy_secret"}
+      - ACAPY_ENDPOINT=http://acapy-verifier:8040
+      - ACAPY_ADMIN_INSECURE_MODE=true
+      - ACAPY_AUTO_PROVISION=true
+      - ACAPY_LOG_LEVEL=info
+      - PYTHONPATH=/app/plugins
+    volumes:
+      - ./config/verifier-config.yml:/app/config.yml:ro
+      - ./config/cheqd-plugin-config.yml:/app/cheqd-config.yml:ro
+      - ./config/pqc-plugin-config.yml:/app/pqc-config.yml:ro
+      - ./acapy-plugins:/app/plugins:ro
+    command: >
+      start --arg-file /app/config.yml
+    networks:
+      - cheqd-ssi-network
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  cheqd-ssi-network:
+    name: cheqd-ssi-network
+    driver: bridge
+
+volumes:
+  # cheqd-node volumes
+  cheqd-validator-0-data:
+  cheqd-validator-1-data:
+  cheqd-validator-2-data:
+  cheqd-validator-3-data:
+  cheqd-seed-0-data:
+  cheqd-observer-0-data:
+
+  # Database volume
+  postgres-acapy-data:

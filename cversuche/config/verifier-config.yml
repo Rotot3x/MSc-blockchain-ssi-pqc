@@ -1,0 +1,116 @@
+# ACA-Py Verifier Agent Configuration
+# Role: Request and verify proofs from holders on cheqd ledger
+# Plugins: cheqd (DID method), pqcrypto_fm (Post-Quantum Crypto)
+
+label: "PQC Quantum-Safe Verifier on cheqd"
+auto-provision: true
+
+#############################################################################
+# Plugins Configuration
+#############################################################################
+
+plugin:
+  - cheqd
+  - pqcrypto_fm
+
+plugin-config: /app/cheqd-config.yml
+plugin-config-value: /app/pqc-config.yml
+
+#############################################################################
+# Transport Configuration
+#############################################################################
+
+inbound-transport:
+  - [http, 0.0.0.0, 8040]
+  - [ws, 0.0.0.0, 8042]
+
+outbound-transport: http
+
+endpoint:
+  - http://acapy-verifier:8040
+  - ws://acapy-verifier:8042
+
+#############################################################################
+# Admin API Configuration
+#############################################################################
+
+admin: [0.0.0.0, 8041]
+admin-insecure-mode: true
+
+#############################################################################
+# Wallet Configuration (Askar-AnonCreds with PostgreSQL)
+#############################################################################
+
+wallet-name: verifier_wallet
+wallet-type: askar-anoncreds
+wallet-key: verifier_wallet_key_secure_2024
+wallet-storage-type: postgres_storage
+
+wallet-storage-config: |
+  {
+    "url": "postgres-acapy:5432",
+    "wallet_scheme": "DatabasePerWallet"
+  }
+
+wallet-storage-creds: |
+  {
+    "account": "acapy",
+    "password": "acapy_secret",
+    "admin_account": "acapy",
+    "admin_password": "acapy_secret"
+  }
+
+wallet-allow-insecure-seed: true
+
+#############################################################################
+# Ledger Configuration (cheqd network)
+#############################################################################
+
+no-ledger: true
+
+#############################################################################
+# Connection & Presentation Settings
+#############################################################################
+
+# Connection Settings
+debug-connections: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-messages: true
+monitor-ping: true
+
+# Credential Settings (verifier typically doesn't issue)
+debug-credentials: true
+preserve-exchange-records: true
+
+# Presentation Settings
+debug-presentations: true
+auto-respond-presentation-proposal: false
+auto-respond-presentation-request: false  # Verifier initiates, doesn't auto-respond
+auto-verify-presentation: true  # Auto-verify received presentations
+
+#############################################################################
+# Revocation Configuration
+#############################################################################
+
+monitor-revocation-notification: true
+
+#############################################################################
+# Logging Configuration
+#############################################################################
+
+log-level: info
+log-file: /tmp/verifier.log
+
+#############################################################################
+# Performance & Security Settings
+#############################################################################
+
+ws-heartbeat: 30
+ws-timeout: 60
+
+public-invites: true
+
+emit-new-didcomm-prefix: true
+emit-new-didcomm-mime-type: true

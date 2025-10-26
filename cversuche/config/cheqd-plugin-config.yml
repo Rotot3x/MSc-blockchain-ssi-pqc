@@ -1,0 +1,187 @@
+# cheqd Plugin Configuration for ACA-Py
+# Enables did:cheqd DID method support for all agents
+
+#############################################################################
+# DID Resolver Configuration
+#############################################################################
+
+# Universal DID Resolver endpoint for resolving did:cheqd DIDs
+resolver_url: "http://did-resolver:8080/1.0/identifiers/"
+
+# Alternative: Direct cheqd node resolver
+# resolver_url: "http://cheqd-validator-0:1317/cheqd/did/v2/"
+
+#############################################################################
+# DID Registrar Configuration
+#############################################################################
+
+# Universal DID Registrar endpoint for creating/updating did:cheqd DIDs
+registrar_url: "http://did-registrar:9080/1.0/"
+
+# Alternative: Direct driver URL
+# registrar_driver_url: "http://did-registrar-driver:3000"
+
+#############################################################################
+# cheqd Network Configuration
+#############################################################################
+
+# Network selection (testnet or mainnet)
+network: "testnet"
+
+# For local development, point to local cheqd-node
+use_local_network: true
+local_rpc_endpoint: "http://cheqd-validator-0:26657"
+local_rest_endpoint: "http://cheqd-validator-0:1317"
+local_grpc_endpoint: "cheqd-validator-0:9090"
+
+# Chain ID for local network
+chain_id: "cheqd-local"
+
+#############################################################################
+# DID Creation Settings
+#############################################################################
+
+# Default DID method for new DIDs
+default_did_method: "cheqd"
+
+# DID creation strategy
+# - "automatic": Automatically create DID on first use
+# - "manual": Require explicit DID creation calls
+did_creation_strategy: "manual"
+
+# Verification method types to support
+supported_verification_methods:
+  - "Ed25519VerificationKey2020"
+  - "JsonWebKey2020"
+  - "ML-DSA-65-2024"  # PQC signature algorithm
+  - "ML-DSA-44-2024"
+  - "ML-DSA-87-2024"
+
+# Key agreement methods for encryption
+supported_key_agreement_methods:
+  - "X25519KeyAgreementKey2020"
+  - "ML-KEM-768-2024"  # PQC KEM algorithm
+  - "ML-KEM-512-2024"
+  - "ML-KEM-1024-2024"
+
+#############################################################################
+# AnonCreds Configuration on cheqd
+#############################################################################
+
+# Enable AnonCreds support on cheqd ledger
+anoncreds_enabled: true
+
+# AnonCreds object types to store on cheqd
+anoncreds_store_schema: true
+anoncreds_store_cred_def: true
+anoncreds_store_rev_reg_def: true
+anoncreds_store_rev_reg_entry: true
+
+# Namespace for AnonCreds resources
+anoncreds_namespace: "anoncreds"
+
+#############################################################################
+# DID-Linked Resources Configuration
+#############################################################################
+
+# Enable DID-linked resources (for schemas, credential definitions, etc.)
+did_linked_resources_enabled: true
+
+# Resource types to support
+supported_resource_types:
+  - "anonCredsSchema"
+  - "anonCredsCredDef"
+  - "anonCredsRevRegDef"
+  - "anonCredsRevRegEntry"
+  - "anonCredsStatusList"
+
+# Resource storage settings
+max_resource_size_bytes: 10485760  # 10 MB
+compress_resources: true
+
+#############################################################################
+# Transaction Fees Configuration
+#############################################################################
+
+# Fee payer configuration for did:cheqd transactions
+# Uses the mnemonic from environment variables set in docker-compose
+
+# Minimum gas prices (in ncheq)
+minimum_gas_prices: "25ncheq"
+
+# Gas multiplier for transaction simulation
+gas_multiplier: 1.5
+
+# Maximum gas limit per transaction
+max_gas_limit: 300000
+
+#############################################################################
+# Caching Configuration
+#############################################################################
+
+# Enable DID document caching
+cache_did_documents: true
+did_cache_ttl_seconds: 3600  # 1 hour
+
+# Enable resource caching
+cache_resources: true
+resource_cache_ttl_seconds: 7200  # 2 hours
+
+# Cache size limits
+max_cache_entries: 1000
+
+#############################################################################
+# Retry & Timeout Configuration
+#############################################################################
+
+# HTTP request timeout (seconds)
+request_timeout: 30
+
+# Retry settings for network operations
+max_retries: 3
+retry_backoff_seconds: 2
+
+# Transaction confirmation timeout
+tx_confirmation_timeout: 60
+
+#############################################################################
+# Security Settings
+#############################################################################
+
+# Verify signatures on DID documents
+verify_did_signatures: true
+
+# Require authenticated DID operations
+require_authentication: false  # Set to true in production
+
+# TLS settings for external connections
+verify_ssl: true  # Set to false for local development with self-signed certs
+
+#############################################################################
+# Logging Configuration
+#############################################################################
+
+# Log level for cheqd plugin (debug, info, warning, error)
+log_level: "info"
+
+# Enable detailed transaction logging
+log_transactions: true
+
+# Log DID resolution requests
+log_did_resolution: false
+
+#############################################################################
+# Advanced Settings
+#############################################################################
+
+# Enable experimental features
+experimental_features: true
+
+# Support for legacy DID formats
+support_legacy_did_formats: false
+
+# Automatic DID document updates
+auto_update_did_documents: false
+
+# Enable metrics collection
+enable_metrics: false

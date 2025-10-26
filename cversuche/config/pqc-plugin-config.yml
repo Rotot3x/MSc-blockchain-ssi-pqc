@@ -1,0 +1,277 @@
+# PQCrypto_FM Plugin Configuration for ACA-Py
+# Enables Post-Quantum Cryptography for all cryptographic operations
+
+#############################################################################
+# Core PQC Settings
+#############################################################################
+
+# Enable PQC functionality
+enable: true
+
+# Use hybrid mode (PQC + classical crypto for defense in depth)
+hybrid_mode: true
+
+# Set PQC as default cryptographic provider
+set_as_default: true
+
+#############################################################################
+# Signature Algorithm Configuration
+#############################################################################
+
+# Primary signature algorithm (NIST standardized)
+signature_algorithm: "ML-DSA-65"
+
+# Supported signature algorithms (in preference order)
+supported_signature_algorithms:
+  - "ML-DSA-65"     # NIST Level 3 (recommended for most use cases)
+  - "ML-DSA-87"     # NIST Level 5 (maximum security)
+  - "ML-DSA-44"     # NIST Level 1 (compact signatures)
+  - "Dilithium3"    # Legacy Dilithium (ML-DSA predecessor)
+  - "Dilithium5"
+  - "Falcon-1024"   # Alternative lattice-based signature
+  - "Falcon-512"
+
+# Fallback to classical cryptography if PQC unavailable
+fallback_signature_algorithm: "Ed25519"
+
+# Allow classical-only signatures (for compatibility)
+allow_classical_only: true
+
+#############################################################################
+# Key Encapsulation Mechanism (KEM) Configuration
+#############################################################################
+
+# Primary KEM algorithm (NIST standardized)
+kem_algorithm: "ML-KEM-768"
+
+# Supported KEM algorithms (in preference order)
+supported_kem_algorithms:
+  - "ML-KEM-768"    # NIST Level 3 (recommended)
+  - "ML-KEM-1024"   # NIST Level 5 (maximum security)
+  - "ML-KEM-512"    # NIST Level 1 (compact keys)
+  - "Kyber768"      # Legacy Kyber (ML-KEM predecessor)
+  - "Kyber1024"
+  - "Kyber512"
+
+# Fallback KEM for compatibility
+fallback_kem_algorithm: "X25519"
+
+#############################################################################
+# Hybrid Cryptography Configuration
+#############################################################################
+
+# Hybrid signature schemes (PQC + Classical)
+hybrid_signature_schemes:
+  - name: "Hybrid-ML-DSA-65-Ed25519"
+    pqc_algorithm: "ML-DSA-65"
+    classical_algorithm: "Ed25519"
+    enabled: true
+
+  - name: "Hybrid-ML-DSA-87-Ed25519"
+    pqc_algorithm: "ML-DSA-87"
+    classical_algorithm: "Ed25519"
+    enabled: true
+
+# Hybrid KEM schemes
+hybrid_kem_schemes:
+  - name: "Hybrid-ML-KEM-768-X25519"
+    pqc_algorithm: "ML-KEM-768"
+    classical_algorithm: "X25519"
+    enabled: true
+
+  - name: "Hybrid-ML-KEM-1024-X25519"
+    pqc_algorithm: "ML-KEM-1024"
+    classical_algorithm: "X25519"
+    enabled: true
+
+# Default hybrid scheme selection
+use_hybrid_by_default: true
+default_hybrid_signature: "Hybrid-ML-DSA-65-Ed25519"
+default_hybrid_kem: "Hybrid-ML-KEM-768-X25519"
+
+#############################################################################
+# Performance Settings
+#############################################################################
+
+# Enable key caching for improved performance
+enable_key_caching: true
+max_cached_keys: 200
+key_cache_ttl_seconds: 3600  # 1 hour
+
+# Enable signature caching
+enable_signature_caching: false  # Disabled for security
+
+# Thread pool for PQC operations
+pqc_thread_pool_size: 4
+
+# Batch processing settings
+enable_batch_operations: true
+batch_size: 10
+
+#############################################################################
+# DID Method Configuration
+#############################################################################
+
+# Default DID method for PQC DIDs
+default_did_method: "did:cheqd"
+
+# Alternative PQC-specific DID methods
+enable_did_pqc: true      # Pure PQC DID method
+enable_did_hybrid: true   # Hybrid PQC+classical DID method
+
+# DID key type preferences
+did_key_type_preference:
+  - "ML-DSA-65"
+  - "Hybrid-ML-DSA-65-Ed25519"
+  - "Ed25519"
+
+#############################################################################
+# Verifiable Credentials Configuration
+#############################################################################
+
+# Enable PQC for credential signatures
+enable_pqc_credentials: true
+
+# Enable PQC for presentation proofs
+enable_pqc_proofs: true
+
+# Signature suite for credentials
+credential_signature_suite: "ML-DSA-65-2024"
+
+# Proof suite for presentations
+proof_signature_suite: "ML-DSA-65-2024"
+
+# Support legacy credential formats
+support_legacy_credentials: true
+
+#############################################################################
+# Key Generation Settings
+#############################################################################
+
+# Key generation strategy
+# - "on-demand": Generate keys when needed
+# - "pre-generate": Pre-generate key pool
+key_generation_strategy: "on-demand"
+
+# For pre-generation strategy
+pre_generated_key_pool_size: 10
+key_pool_refill_threshold: 3
+
+# Key derivation settings
+enable_deterministic_key_derivation: true
+key_derivation_algorithm: "SHA-256"
+
+#############################################################################
+# Migration & Compatibility Settings
+#############################################################################
+
+# Support algorithm migration
+enable_algorithm_migration: true
+
+# Allow multiple key types per DID
+allow_multiple_key_types: true
+
+# Backward compatibility with non-PQC systems
+backward_compatibility_mode: true
+
+# Grace period for algorithm deprecation (days)
+algorithm_deprecation_grace_period: 180
+
+#############################################################################
+# Security Settings
+#############################################################################
+
+# Enforce PQC for all operations (disable fallback)
+enforce_pqc_only: false  # Set to true after full PQC migration
+
+# Key rotation settings
+enable_automatic_key_rotation: false
+key_rotation_interval_days: 90
+
+# Validate all PQC signatures strictly
+strict_signature_validation: true
+
+# Enable side-channel attack mitigations
+enable_side_channel_protection: true
+
+#############################################################################
+# Monitoring & Logging
+#############################################################################
+
+# Log level for PQC operations
+log_level: "info"
+
+# Log cryptographic operations (WARNING: may expose sensitive timing info)
+log_crypto_operations: false
+
+# Enable performance metrics
+enable_performance_metrics: true
+metrics_reporting_interval_seconds: 300  # 5 minutes
+
+# Log algorithm usage statistics
+log_algorithm_usage: true
+
+#############################################################################
+# Debug Settings
+#############################################################################
+
+# Debug mode (enables additional logging and validation)
+debug_mode: false
+
+# Enable test vectors validation
+validate_test_vectors: false
+
+# Enable constant-time operation checks
+verify_constant_time: false
+
+#############################################################################
+# liboqs Configuration
+#############################################################################
+
+# OQS library settings
+oqs_enable: true
+
+# Algorithm priority (when multiple implementations available)
+oqs_algorithm_priority:
+  - "NIST"      # Prefer NIST standardized algorithms
+  - "portable"  # Use portable implementations
+
+# Enable OQS optimizations
+oqs_use_optimizations: true
+
+# OQS memory management
+oqs_secure_memory: true
+oqs_memory_cleanup: true
+
+#############################################################################
+# Advanced Features
+#############################################################################
+
+# Threshold signatures (experimental)
+enable_threshold_signatures: false
+threshold_signature_threshold: 2
+threshold_signature_total: 3
+
+# Zero-knowledge proofs with PQC (experimental)
+enable_pqc_zkp: false
+
+# Post-quantum secure channels
+enable_pqc_secure_channels: false
+
+#############################################################################
+# Compliance & Standards
+#############################################################################
+
+# NIST compliance mode
+nist_compliance_mode: true
+
+# FIPS mode (when available)
+fips_mode: false
+
+# Algorithm approval list (only allow these)
+algorithm_allowlist_enabled: false
+algorithm_allowlist:
+  - "ML-DSA-65"
+  - "ML-DSA-87"
+  - "ML-KEM-768"
+  - "ML-KEM-1024"

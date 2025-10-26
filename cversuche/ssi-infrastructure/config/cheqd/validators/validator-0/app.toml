@@ -1,0 +1,129 @@
+# cheqd-node Application Configuration for Validator 0
+
+# Minimum gas prices to accept for transactions
+minimum-gas-prices = "25ncheq"
+
+# The network to connect to
+pruning = "default"
+pruning-keep-recent = "0"
+pruning-keep-every = "0"
+pruning-interval = "0"
+
+# HaltHeight contains a non-zero block height at which a node will gracefully
+# halt and shutdown that can be used to assist upgrades and testing.
+halt-height = 0
+
+# HaltTime contains a non-zero minimum block time (in Unix seconds) at which
+# a node will gracefully halt and shutdown that can be used to assist upgrades
+# and testing.
+halt-time = 0
+
+# MinRetainBlocks defines the minimum block height offset from the current
+# block being committed, such that all blocks past this offset are pruned
+# from Tendermint.
+min-retain-blocks = 0
+
+# InterBlockCache enables inter-block caching.
+inter-block-cache = true
+
+# IndexEvents defines the set of events in the form {eventType}.{attributeKey},
+# which informs Tendermint what to index.
+index-events = []
+
+# IavlCacheSize set the size of the iavl tree cache.
+iavl-cache-size = 781250
+
+# IavlDisableFastNode enables or disables the fast node feature of IAVL.
+iavl-disable-fastnode = false
+
+###############################################################################
+###                                  API                                   ###
+###############################################################################
+
+[api]
+# Enable defines if the API server should be enabled.
+enable = true
+
+# Swagger defines if swagger documentation should automatically be registered.
+swagger = true
+
+# Address defines the API server to listen on.
+address = "tcp://0.0.0.0:1317"
+
+# MaxOpenConnections defines the number of maximum open connections.
+max-open-connections = 1000
+
+# RPCReadTimeout defines the Tendermint RPC read timeout (in seconds).
+rpc-read-timeout = 10
+
+# RPCWriteTimeout defines the Tendermint RPC write timeout (in seconds).
+rpc-write-timeout = 0
+
+# RPCMaxBodyBytes defines the Tendermint maximum response body (in bytes).
+rpc-max-body-bytes = 1000000
+
+# EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
+enabled-unsafe-cors = true
+
+###############################################################################
+###                           Rosetta Configuration                        ###
+###############################################################################
+
+[rosetta]
+# Enable defines if the Rosetta API server should be enabled.
+enable = false
+
+# Address defines the Rosetta API server to listen on.
+address = ":8080"
+
+# Network defines the name of the blockchain that will be returned in Rosetta interface.
+blockchain = "cheqd"
+
+# Network defines the name of the network that will be returned in Rosetta interface.
+network = "cheqd-ssi-local"
+
+# Retries defines the number of retries when connecting to the node before failing.
+retries = 3
+
+# Offline defines if Rosetta server should run in offline mode.
+offline = false
+
+###############################################################################
+###                           gRPC Configuration                           ###
+###############################################################################
+
+[grpc]
+# Enable defines if the gRPC server should be enabled.
+enable = true
+
+# Address defines the gRPC server address to bind to.
+address = "0.0.0.0:9090"
+
+###############################################################################
+###                        gRPC Web Configuration                          ###
+###############################################################################
+
+[grpc-web]
+# GRPCWebEnable defines if the gRPC-web should be enabled.
+enable = true
+
+# Address defines the gRPC-web server address to bind to.
+address = "0.0.0.0:9091"
+
+# EnableUnsafeCORS defines if CORS should be enabled (unsafe - use it at your own risk).
+enable-unsafe-cors = false
+
+###############################################################################
+###                        State Sync Configuration                        ###
+###############################################################################
+
+[state-sync]
+# State sync rapidly bootstraps a new node by discovering, fetching, and restoring a state machine
+# snapshot from peers instead of fetching and replaying historical blocks. Requires some peers in
+# the network to take and serve state machine snapshots. State sync is not attempted if the node
+# has any local state (LastBlockHeight > 0). The node will have a truncated block history,
+# starting from the height of the snapshot.
+snapshot-interval = 0
+
+# State sync snapshot to keep.
+snapshot-keep-recent = 2

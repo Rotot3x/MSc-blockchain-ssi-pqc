@@ -15,8 +15,6 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.tails-server
-    ports:
-      - 6543:6543
     networks:
       - tails-server
     command: >
@@ -30,5 +28,51 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.test
+
+  # Post-Quantum Nginx Reverse Proxy für Tails Server
+  pqc-reverseproxy-tails-server:
+    build:
+      context: ./pqc_reverseproxy_nginx
+      dockerfile: Dockerfile
+      args:
+        OPENSSL_TAG: openssl-3.5.4
+        LIBOQS_TAG: 0.13.0
+        OQSPROVIDER_TAG: 0.9.0
+        NGINX_VERSION: 1.28.0
+        SIG_ALG: mldsa65
+        DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
+    container_name: pqc-reverseproxy-tails-server
+    environment:
+      # OpenSSL Configuration
+      - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
+      # Post-Quantum Key Exchange Groups
+      - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
+    networks:
+      - tails-server
+      - von_reverseproxy
+    ports:
+      - 6543:6543  # HTTPS with Post-Quantum Cryptography (ML-KEM-768)
+    volumes:
+      # Custom nginx configuration for reverse proxy
+      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_tails-server.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      # Custom ML-DSA-65 certificates
+      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      # Logs
+      - nginx-logs:/opt/nginx/logs
+    depends_on:
+      - tails-server
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:6543/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
 networks:
   tails-server:
+  von_reverseproxy:
+    external: true
+
+volumes:
+  nginx-logs:

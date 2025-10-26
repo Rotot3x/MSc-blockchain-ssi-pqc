@@ -1,0 +1,14 @@
+# Extended cheqd image with jq for better health checks
+FROM ghcr.io/cheqd/cheqd-node:latest
+
+# Switch to root to install packages
+USER root
+
+# Install jq for JSON parsing in health checks
+RUN apk add --no-cache jq
+
+# Switch back to cheqd user
+USER cheqd
+
+# Keep the original entrypoint
+ENTRYPOINT ["node-start"]

@@ -1,0 +1,11 @@
+# cheqd Plugin Configuration for Issuer Agent
+# Connects ACA-Py to cheqd network via DID Resolver and Registrar services
+# Network: ssi-network (172.20.0.0/16)
+
+# DID Resolver - Resolves did:cheqd DIDs
+# Service: did-resolver (172.20.2.10:8080)
+resolver_url: "http://did-resolver:8080/1.0/identifiers/"
+
+# DID Registrar - Creates and manages did:cheqd DIDs
+# Service: did-registrar (172.20.2.20:9080)
+registrar_url: "http://did-registrar:9080/1.0/"

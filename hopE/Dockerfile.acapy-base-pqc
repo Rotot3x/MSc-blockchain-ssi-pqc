@@ -1,0 +1,185 @@
+# =============================================================================
+# Stage 1: Build OpenSSL 3.5.4 with native PQC support (ML-KEM, ML-DSA)
+# =============================================================================
+FROM debian:bookworm-slim AS openssl-builder
+
+ARG OPENSSL_VERSION=3.5.4
+ARG OPENSSL_PREFIX=/usr/local/ssl
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    libssl-dev \
+    perl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and extract OpenSSL 3.5.4
+WORKDIR /tmp
+RUN curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o openssl.tar.gz && \
+    tar -xzf openssl.tar.gz && \
+    rm openssl.tar.gz
+
+# Build OpenSSL with native PQC support
+WORKDIR /tmp/openssl-${OPENSSL_VERSION}
+RUN ./Configure \
+    --prefix=${OPENSSL_PREFIX} \
+    --openssldir=${OPENSSL_PREFIX}/ssl \
+    shared \
+    enable-fips \
+    linux-x86_64 && \
+    make -j"$(nproc)" && \
+    make install_sw install_ssldirs
+
+# Verify OpenSSL 3.5.4 was built successfully
+# RUN LD_LIBRARY_PATH=${OPENSSL_PREFIX}/lib64 ${OPENSSL_PREFIX}/bin/openssl version && \
+#     ${OPENSSL_PREFIX}/bin/openssl list -kem-algorithms | grep -i ml-kem && \
+#     ${OPENSSL_PREFIX}/bin/openssl list -signature-algorithms | grep -i ml-dsa
+
+RUN LD_LIBRARY_PATH=${OPENSSL_PREFIX}/lib64 ${OPENSSL_PREFIX}/bin/openssl version
+
+# =============================================================================
+# Stage 2: ACA-Py Build Stage (Poetry)
+# =============================================================================
+FROM python:3.12-slim-bookworm AS build
+ARG python_version=3.12
+
+RUN pip install --no-cache-dir poetry==2.1.1
+
+WORKDIR /src
+
+COPY ./pyproject.toml ./poetry.lock ./
+RUN poetry install --no-root
+
+COPY ./acapy_agent ./acapy_agent
+COPY ./README.md /src
+RUN poetry build
+
+# =============================================================================
+# Stage 3: Main Runtime Image with OpenSSL 3.5.4 PQC
+# =============================================================================
+FROM python:3.12-slim-bookworm AS main
+
+ARG python_version=3.12
+ARG uid=1001
+ARG user=aries
+ARG acapy_name="acapy-agent"
+ARG acapy_version
+ARG acapy_reqs=[didcommv2]
+ARG OPENSSL_PREFIX=/usr/local/ssl
+
+ENV HOME="/home/$user" \
+    APP_ROOT="/home/$user" \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8 \
+    PIP_NO_CACHE_DIR=off \
+    PYTHONUNBUFFERED=1 \
+    PYTHONIOENCODING=UTF-8 \
+    RUST_LOG=warn \
+    SHELL=/bin/bash \
+    SUMMARY="$acapy_name image with PQC support" \
+    DESCRIPTION="$acapy_name provides a base image for running acapy agents with Post-Quantum Cryptography support via OpenSSL 3.5.4. \
+    Supports ML-KEM-768, ML-DSA-65, and X25519MLKEM768 hybrid algorithms. Based on Debian Bookworm."
+
+LABEL summary="$SUMMARY" \
+    description="$DESCRIPTION" \
+    io.k8s.description="$DESCRIPTION" \
+    io.k8s.display-name="$acapy_name $acapy_version" \
+    name=$acapy_name \
+    acapy.version="$acapy_version" \
+    maintainer=""
+
+# Copy OpenSSL 3.5.4 from builder stage
+COPY --from=openssl-builder ${OPENSSL_PREFIX} ${OPENSSL_PREFIX}
+
+# Copy PQC Root CA certificate
+COPY hopE/pqc_reverseproxy_nginx/certs/rootCA.crt /usr/local/share/ca-certificates/pqc-root-ca.crt
+
+# Add aries user
+RUN useradd -U -ms /bin/bash -u $uid $user
+
+# Install environment (without openssl, we use custom build)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    git \
+    libffi-dev \
+    libgmp10 \
+    libncurses5 \
+    libncursesw5 \
+    sqlite3 \
+    zlib1g && \
+    apt-get autopurge -y && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/* /usr/share/doc/*
+
+# Import PQC Root CA into system trust store
+RUN update-ca-certificates && \
+    echo "PQC Root CA imported successfully"
+
+# Replace system OpenSSL with PQC-enabled version
+RUN ln -sf ${OPENSSL_PREFIX}/bin/openssl /usr/bin/openssl && \
+    ln -sf ${OPENSSL_PREFIX}/lib64/libssl.so.3 /usr/lib/x86_64-linux-gnu/libssl.so.3 && \
+    ln -sf ${OPENSSL_PREFIX}/lib64/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3 && \
+    echo "${OPENSSL_PREFIX}/lib64" > /etc/ld.so.conf.d/openssl-pqc.conf && \
+    ldconfig
+
+# Link OpenSSL's cert directory to system certs (for Python ssl module)
+# This ensures Python's ssl module finds the PQC Root CA
+RUN rm -rf ${OPENSSL_PREFIX}/ssl/certs && \
+    ln -s /etc/ssl/certs ${OPENSSL_PREFIX}/ssl/certs && \
+    ln -s /etc/ssl/certs/ca-certificates.crt ${OPENSSL_PREFIX}/ssl/cert.pem
+
+# Set SSL environment variables for Python ssl module
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_DIR=/etc/ssl/certs \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
+# Verify OpenSSL installation and PQC support
+RUN openssl version && \
+    openssl list -kem-algorithms | grep -i ml-kem && \
+    echo "OpenSSL 3.5.4 with PQC support successfully installed"
+
+WORKDIR $HOME
+
+# Add local binaries and aliases to path
+ENV PATH="$HOME/.local/bin:$PATH"
+
+# - In order to drop the root user, we have to make some directories writable
+#   to the root group as OpenShift default security model is to run the container
+#   under random UID.
+RUN usermod -a -G 0 $user
+
+# Create standard directories to allow volume mounting and set permissions
+# Note: PIP_NO_CACHE_DIR environment variable should be cleared to allow caching
+RUN mkdir -p \
+    $HOME/.acapy_agent \
+    $HOME/.cache/pip/http \
+    $HOME/.indy_client \
+    $HOME/ledger/sandbox/data \
+    $HOME/log
+
+# The root group needs access the directories under $HOME/.indy_client and $HOME/.acapy_agent for the container to function in OpenShift.
+RUN chown -R $user:root $HOME/.indy_client $HOME/.acapy_agent && \
+    chmod -R ug+rw $HOME/log $HOME/ledger $HOME/.acapy_agent $HOME/.cache $HOME/.indy_client
+
+# Create /home/indy and symlink .indy_client folder for backwards compatibility with artifacts created on older indy-based images.
+RUN mkdir -p /home/indy
+RUN ln -s /home/aries/.indy_client /home/indy/.indy_client
+
+# Install ACA-py from the wheel as $user,
+# and ensure the permissions on the python 'site-packages' and $HOME/.local folders are set correctly.
+USER $user
+COPY --from=build /src/dist/acapy_agent*.whl .
+RUN acapy_agent_package=$(find ./ -name "acapy_agent*.whl" | head -n 1) && \
+    echo "Installing ${acapy_agent_package} ..." && \
+    pip install --no-cache-dir --find-links=. ${acapy_agent_package}${acapy_reqs} && \
+    rm acapy_agent*.whl && \
+    chmod +rx $(python -m site --user-site) $HOME/.local
+
+ENTRYPOINT ["aca-py"]

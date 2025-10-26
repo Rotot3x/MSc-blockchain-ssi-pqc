@@ -1,0 +1,617 @@
+# Complete SSI Infrastructure with cheqd + ACA-Py
+# Self-Sovereign Identity workflow with classic cryptography
+# Architecture: cheqd localnet (6 nodes) + 3 ACA-Py agents
+#
+# Fixed IP Address Schema (Network: 172.20.0.0/16):
+# =====================================================
+#
+# cheqd Blockchain Nodes (172.20.1.x):
+#   validator-0:  172.20.1.10 (main validator with gRPC)
+#   validator-1:  172.20.1.11
+#   validator-2:  172.20.1.12
+#   validator-3:  172.20.1.13
+#   seed-0:       172.20.1.20 (seed node)
+#   observer-0:   172.20.1.30 (observer node)
+#
+# SSI Services (172.20.2.x):
+#   did-resolver:        172.20.2.10 (Port 8080)
+#   did-registrar:       172.20.2.20 (Port 9080)
+#   did-registrar-driver: 172.20.2.30 (Port 3000)
+#
+# Databases (172.20.3.x):
+#   postgres-acapy:      172.20.3.10 (Port 5432)
+#
+# ACA-Py Agents (172.20.4.x):
+#   acapy-issuer:        172.20.4.10 (Admin: 8021, Transport: 8020)
+#   acapy-holder:        172.20.4.20 (Admin: 8031, Transport: 8030)
+#   acapy-verifier:      172.20.4.30 (Admin: 8041, Transport: 8040)
+#
+# Utilities (172.20.5.x):
+#   jupyter:             172.20.5.10 (Port 8888)
+
+services:
+  #############################################################################
+  # Extended cheqd-node Image with jq for better health checks
+  # Note: Build separately with: docker compose build cheqd-extended
+  #############################################################################
+
+  #############################################################################
+  # cheqd-node Localnet Infrastructure (with extended image)
+  #############################################################################
+
+  validator-0:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 26656    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 26657    # Tendermint RPC port
+      - target: 1317
+        published: 1317     # Cosmos REST API port
+      - target: 9090
+        published: 9090     # gRPC port
+      - target: 9091
+        published: 9091     # gRPC-Gateway port
+      - target: 26660
+        published: 26660    # Prometheus metrics port
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - type: volume
+        source: validator-0-data
+        target: /home/cheqd
+    env_file:
+      - config/cheqd/container-env/validator-0.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: validator-0-node-key
+        target: /node_key
+      - source: validator-0-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.10
+
+  validator-1:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 26756    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 26757    # Tendermint RPC port
+      - target: 1317
+        published: 1417     # Cosmos REST API port
+      - target: 9090
+        published: 9190     # gRPC port
+      - target: 9091
+        published: 9191     # gRPC-Gateway port
+      - target: 26660
+        published: 26760    # Prometheus metrics port
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - type: volume
+        source: validator-1-data
+        target: /home/cheqd
+    env_file:
+      - config/cheqd/container-env/validator-1.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: validator-1-node-key
+        target: /node_key
+      - source: validator-1-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.11
+
+  validator-2:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 26856    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 26857    # Tendermint RPC port
+      - target: 1317
+        published: 1517     # Cosmos REST API port
+      - target: 9090
+        published: 9290     # gRPC port
+      - target: 9091
+        published: 9291     # gRPC-Gateway port
+      - target: 26660
+        published: 26860    # Prometheus metrics port
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - type: volume
+        source: validator-2-data
+        target: /home/cheqd
+    env_file:
+      - config/cheqd/container-env/validator-2.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: validator-2-node-key
+        target: /node_key
+      - source: validator-2-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.12
+
+  validator-3:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 26956    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 26957    # Tendermint RPC port
+      - target: 1317
+        published: 1617     # Cosmos REST API port
+      - target: 9090
+        published: 9390     # gRPC port
+      - target: 9091
+        published: 9391     # gRPC-Gateway port
+      - target: 26660
+        published: 26960    # Prometheus metrics port
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - type: volume
+        source: validator-3-data
+        target: /home/cheqd
+    env_file:
+      - config/cheqd/container-env/validator-3.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: validator-3-node-key
+        target: /node_key
+      - source: validator-3-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.13
+
+  seed-0:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 27056    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 27057    # Tendermint RPC port
+      - target: 1317
+        published: 1717     # Cosmos REST API port
+      - target: 9090
+        published: 9490     # gRPC port
+      - target: 9091
+        published: 9491     # gRPC-Gateway port
+      - target: 26660
+        published: 27060    # Prometheus metrics port
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - type: volume
+        source: seed-0-data
+        target: /home/cheqd
+    env_file:
+      - config/cheqd/container-env/seed-0.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: seed-0-node-key
+        target: /node_key
+      - source: seed-0-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.20
+
+  observer-0:
+    image: cheqd-extended:latest
+    ports:
+      - target: 26656
+        published: 27156    # Tendermint peer-to-peer (P2P) port
+      - target: 26657
+        published: 27157    # Tendermint RPC port
+      - target: 1317
+        published: 1817     # Cosmos REST API port
+      - target: 9090
+        published: 9590     # gRPC port
+      - target: 9091
+        published: 9591     # gRPC-Gateway port
+      - target: 26660
+        published: 27160    # Prometheus metrics port
+    volumes:
+      - type: volume
+        source: observer-0-data
+        target: /home/cheqd
+    entrypoint: [ "node-start" ]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:26657/status | jq 'select(.result.sync_info.catching_up == false)'"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+      start_period: 15s
+    env_file:
+      - config/cheqd/container-env/observer-0.env
+    configs:
+      - source: genesis
+        target: /genesis
+      - source: seeds
+        target: /seeds
+      - source: observer-0-node-key
+        target: /node_key
+      - source: observer-0-priv-val-key
+        target: /priv_validator_key
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.1.30
+
+  #############################################################################
+  # DID Resolver & Registrar Services
+  #############################################################################
+
+  did-resolver:
+    image: ghcr.io/cheqd/did-resolver:latest
+    container_name: did-resolver
+    ports:
+      - "8080:8080"
+    environment:
+      - MAINNET_ENDPOINT=validator-0:9090,false,5s
+      - TESTNET_ENDPOINT=validator-0:9090,false,5s
+      - LOG_LEVEL=info
+      - RESOLVER_LISTENER=0.0.0.0:8080
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.2.10
+    depends_on:
+      validator-0:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/1.0/identifiers/did:cheqd:testnet:zF7rhDBfUt9d1gJPjx7s1J"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  did-registrar:
+    image: universalregistrar/uni-registrar-web:latest
+    container_name: did-registrar
+    ports:
+      - "9080:9080"
+    environment:
+      - uniregistrar_driver_did_cheqd_url=http://did-registrar-driver:3000
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.2.20
+    depends_on:
+      - did-registrar-driver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/1.0/methods"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  did-registrar-driver:
+    image: ghcr.io/cheqd/did-registrar:production-latest
+    container_name: did-registrar-driver
+    ports:
+      - "3000:3000"
+    environment:
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC:-sketch mountain erode window enact net enrich smoke claim kangaroo another visual write meat latin bacon pulp similar forum guilt father state erase bright}
+      - FEE_PAYER_MAINNET_MNEMONIC=${FEE_PAYER_MAINNET_MNEMONIC}
+      - TESTNET_RPC_ENDPOINT=http://validator-0:26657
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.2.30
+    depends_on:
+      validator-0:
+        condition: service_healthy
+    restart: unless-stopped
+
+  #############################################################################
+  # PostgreSQL Databases
+  #############################################################################
+
+  postgres-acapy:
+    image: postgres:15-alpine
+    container_name: postgres-acapy
+    environment:
+      - POSTGRES_USER=acapy
+      - POSTGRES_PASSWORD=${ACAPY_DB_PASSWORD:-acapy_secret}
+      - POSTGRES_DB=acapy_wallets
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-acapy-data:/var/lib/postgresql/data
+      - ./config/postgres/init-wallets.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.3.10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acapy -d acapy_wallets"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+
+  #############################################################################
+  # Local ACA-Py Build Images
+  # Note: Build separately with: docker compose build acapy-base acapy-ssi-demo
+  #############################################################################
+
+  #############################################################################
+  # ACA-Py Agent: Issuer
+  #############################################################################
+
+  acapy-issuer:
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
+    container_name: acapy-issuer
+    ports:
+      - "8020:8020"  # Inbound transport
+      - "8021:8021"  # Admin API
+    environment:
+      - AGENT_NAME=issuer
+      - AGENT_PORT=8020
+      - ADMIN_PORT=8021
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"${ACAPY_DB_PASSWORD:-acapy_secret}","admin_account":"acapy","admin_password":"${ACAPY_DB_PASSWORD:-acapy_secret}"}
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC}
+      - DOCKERHOST=docker.for.mac.localhost
+      - RUNMODE=docker
+      - LOG_LEVEL=info
+    volumes:
+      - ./config/acapy/issuer-config.yml:/home/aries/config.yml:ro
+      - ./config/acapy/plugin-config-issuer.yml:/home/aries/plugin-config.yml:ro
+      - ../acapy-plugins/cheqd:/plugins/cheqd:ro
+    command: ["aca-py", "start", "--arg-file", "/home/aries/config.yml"]
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.4.10
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      validator-0:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+      did-registrar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  #############################################################################
+  # ACA-Py Agent: Holder
+  #############################################################################
+
+  acapy-holder:
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
+    container_name: acapy-holder
+    ports:
+      - "8030:8030"  # Inbound transport
+      - "8031:8031"  # Admin API
+    environment:
+      - AGENT_NAME=holder
+      - AGENT_PORT=8030
+      - ADMIN_PORT=8031
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"${ACAPY_DB_PASSWORD:-acapy_secret}","admin_account":"acapy","admin_password":"${ACAPY_DB_PASSWORD:-acapy_secret}"}
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC}
+      - DOCKERHOST=docker.for.mac.localhost
+      - RUNMODE=docker
+      - LOG_LEVEL=info
+    volumes:
+      - ./config/acapy/holder-config.yml:/home/aries/config.yml:ro
+      - ./config/acapy/plugin-config-holder.yml:/home/aries/plugin-config.yml:ro
+      - ../acapy-plugins/cheqd:/plugins/cheqd:ro
+    command: ["aca-py", "start", "--arg-file", "/home/aries/config.yml"]
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.4.20
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      validator-0:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+      did-registrar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  #############################################################################
+  # ACA-Py Agent: Verifier
+  #############################################################################
+
+  acapy-verifier:
+    image: ghcr.io/openwallet-foundation/acapy-agent:py3.12-1.3.0
+    container_name: acapy-verifier
+    ports:
+      - "8040:8040"  # Inbound transport
+      - "8041:8041"  # Admin API
+    environment:
+      - AGENT_NAME=verifier
+      - AGENT_PORT=8040
+      - ADMIN_PORT=8041
+      - ACAPY_WALLET_STORAGE_CONFIG={"url":"postgres-acapy:5432","wallet_scheme":"DatabasePerWallet"}
+      - ACAPY_WALLET_STORAGE_CREDS={"account":"acapy","password":"${ACAPY_DB_PASSWORD:-acapy_secret}","admin_account":"acapy","admin_password":"${ACAPY_DB_PASSWORD:-acapy_secret}"}
+      - FEE_PAYER_TESTNET_MNEMONIC=${FEE_PAYER_TESTNET_MNEMONIC}
+      - DOCKERHOST=docker.for.mac.localhost
+      - RUNMODE=docker
+      - LOG_LEVEL=info
+    volumes:
+      - ./config/acapy/verifier-config.yml:/home/aries/config.yml:ro
+      - ./config/acapy/plugin-config-verifier.yml:/home/aries/plugin-config.yml:ro
+      - ../acapy-plugins/cheqd:/plugins/cheqd:ro
+    command: ["aca-py", "start", "--arg-file", "/home/aries/config.yml"]
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.4.30
+    depends_on:
+      postgres-acapy:
+        condition: service_healthy
+      validator-0:
+        condition: service_healthy
+      did-resolver:
+        condition: service_healthy
+      did-registrar:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/status/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  #############################################################################
+  # Jupyter Labs for SSI Workflow
+  #############################################################################
+
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    container_name: ssi-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN:-ssi_workflow_token}
+    volumes:
+      - ./notebooks:/home/jovyan/work/notebooks
+      - jupyter-data:/home/jovyan/work/data
+    networks:
+      ssi-network:
+        ipv4_address: 172.20.5.10
+    restart: unless-stopped
+
+#############################################################################
+# Networks and Volumes
+#############################################################################
+
+networks:
+  ssi-network:
+    name: ssi-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+          ip_range: 172.20.0.0/16
+# Fixed IP Schema:
+# 172.20.1.x - cheqd Blockchain Nodes
+# 172.20.2.x - SSI Services (DID resolver/registrar)
+# 172.20.3.x - Databases
+# 172.20.4.x - ACA-Py Agents
+# 172.20.5.x - Utilities (Jupyter)
+
+configs:
+  # Genesis and seeds
+  genesis:
+    file: config/cheqd/network-config/genesis.json
+  seeds:
+    file: config/cheqd/network-config/seeds.txt
+
+  # Validator 0
+  validator-0-node-key:
+    file: config/cheqd/network-config/validator-0/config/node_key.json
+  validator-0-priv-val-key:
+    file: config/cheqd/network-config/validator-0/config/priv_validator_key.json
+
+  # Validator 1
+  validator-1-node-key:
+    file: config/cheqd/network-config/validator-1/config/node_key.json
+  validator-1-priv-val-key:
+    file: config/cheqd/network-config/validator-1/config/priv_validator_key.json
+
+  # Validator 2
+  validator-2-node-key:
+    file: config/cheqd/network-config/validator-2/config/node_key.json
+  validator-2-priv-val-key:
+    file: config/cheqd/network-config/validator-2/config/priv_validator_key.json
+
+  # Validator 3
+  validator-3-node-key:
+    file: config/cheqd/network-config/validator-3/config/node_key.json
+  validator-3-priv-val-key:
+    file: config/cheqd/network-config/validator-3/config/priv_validator_key.json
+
+  # Seed 0
+  seed-0-node-key:
+    file: config/cheqd/network-config/seed-0/config/node_key.json
+  seed-0-priv-val-key:
+    file: config/cheqd/network-config/seed-0/config/priv_validator_key.json
+
+  # Observer 0
+  observer-0-node-key:
+    file: config/cheqd/network-config/observer-0/config/node_key.json
+  observer-0-priv-val-key:
+    file: config/cheqd/network-config/observer-0/config/priv_validator_key.json
+
+volumes:
+  # cheqd-node volumes
+  validator-0-data:
+  validator-1-data:
+  validator-2-data:
+  validator-3-data:
+  seed-0-data:
+  observer-0-data:
+
+  # Database volumes
+  postgres-acapy-data:
+
+  # Jupyter data
+  jupyter-data:
+

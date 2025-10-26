@@ -1,0 +1,1 @@
+{"@type":"/cosmos.crypto.ed25519.PubKey","key":"mWDp9NaVLYNIwuYc2HBnZiYD+pz47pYl33u3OjLW9GA="}

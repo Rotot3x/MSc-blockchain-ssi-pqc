@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  # Issuer Agent (entspricht Faber aus den Demos)
+  issuer:
+    image: acapy-base
+    container_name: issuer-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-http://webserver:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-http://webserver:8000}
+      - PUBLIC_TAILS_URL=http://host.docker.internal:6543
+      - TAILS_FILE_COUNT=100
+    networks:
+      - hope_network
+      - von_von
+    ports:
+      - "8020:8020"  # Inbound Transport
+      - "8021:8021"  # Admin API
+    volumes:
+      - issuer-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Issuer Agent"
+      --inbound-transport http 0.0.0.0 8020
+      --outbound-transport http
+      --endpoint http://issuer:8020
+      --admin 0.0.0.0 8021
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name issuer_wallet
+      --wallet-key issuer_wallet_key_000000000000
+      --genesis-url http://webserver:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-respond-credential-proposal
+      --auto-respond-credential-offer
+      --auto-respond-credential-request
+      --auto-verify-presentation
+      --public-invites
+      --preserve-exchange-records
+      --tails-server-base-url http://host.docker.internal:6543
+      --notify-revocation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Holder Agent (entspricht Alice aus den Demos)
+  holder:
+    image: acapy-base
+    container_name: holder-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-http://webserver:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-http://webserver:8000}
+      - PUBLIC_TAILS_URL=http://host.docker.internal:6543
+    networks:
+      - hope_network
+      - von_von
+    ports:
+      - "8030:8030"  # Inbound Transport
+      - "8031:8031"  # Admin API
+    volumes:
+      - holder-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Holder Agent"
+      --inbound-transport http 0.0.0.0 8030
+      --outbound-transport http
+      --endpoint http://holder:8030
+      --admin 0.0.0.0 8031
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name holder_wallet
+      --wallet-key holder_wallet_key_000000000000
+      --genesis-url http://webserver:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-respond-credential-offer
+      --auto-store-credential
+      --public-invites
+      --preserve-exchange-records
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8031/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Verifier Agent (entspricht Acme aus den Demos)
+  verifier:
+    image: acapy-base
+    container_name: verifier-agent
+    environment:
+      - DOCKERHOST=${DOCKERHOST:-host.docker.internal}
+      - GENESIS_URL=${GENESIS_URL:-http://webserver:8000/genesis}
+      - LEDGER_URL=${LEDGER_URL:-http://webserver:8000}
+    networks:
+      - hope_network
+      - von_von
+    ports:
+      - "8040:8040"  # Inbound Transport
+      - "8041:8041"  # Admin API
+    volumes:
+      - verifier-data:/home/aries/.acapy_agent
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: >
+      start
+      --label "Verifier Agent"
+      --inbound-transport http 0.0.0.0 8040
+      --outbound-transport http
+      --endpoint http://verifier:8040
+      --admin 0.0.0.0 8041
+      --admin-insecure-mode
+      --auto-provision
+      --wallet-type askar
+      --wallet-name verifier_wallet
+      --wallet-key verifier_wallet_key_00000000000
+      --genesis-url http://webserver:8000/genesis
+      --log-level info
+      --auto-accept-invites
+      --auto-accept-requests
+      --auto-ping-connection
+      --auto-verify-presentation
+      --public-invites
+      --preserve-exchange-records
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8041/status/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  hope_network:
+    driver: bridge
+  von_von:
+    external: true
+
+volumes:
+  issuer-data:
+  holder-data:
+  verifier-data:

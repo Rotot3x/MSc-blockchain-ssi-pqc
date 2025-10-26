@@ -1,0 +1,199 @@
+# ACA-Py Issuer Agent Configuration
+# Role: Issue verifiable credentials with PQC signatures on cheqd ledger
+# Plugins: cheqd (DID method), pqcrypto_fm (Post-Quantum Crypto)
+
+label: "PQC Quantum-Safe Issuer on cheqd"
+auto-provision: true
+
+#############################################################################
+# Plugins Configuration
+#############################################################################
+
+plugin:
+  - cheqd
+  - pqcrypto_fm
+
+plugin-config: /app/cheqd-config.yml
+plugin-config-value: /app/pqc-config.yml
+
+#############################################################################
+# Transport Configuration
+#############################################################################
+
+inbound-transport:
+  - [http, 0.0.0.0, 8020]
+  - [ws, 0.0.0.0, 8022]
+
+outbound-transport: http
+
+endpoint:
+  - http://acapy-issuer:8020
+  - ws://acapy-issuer:8022
+
+#############################################################################
+# Admin API Configuration
+#############################################################################
+
+admin: [0.0.0.0, 8021]
+admin-insecure-mode: true
+
+# Enable admin API authentication in production
+# admin-api-key: your-secure-api-key
+
+#############################################################################
+# Wallet Configuration (Askar-AnonCreds with PostgreSQL)
+#############################################################################
+
+wallet-name: issuer_wallet
+wallet-type: askar-anoncreds
+wallet-key: issuer_wallet_key_secure_2024
+wallet-storage-type: postgres_storage
+
+wallet-storage-config: |
+  {
+    "url": "postgres-acapy:5432",
+    "wallet_scheme": "DatabasePerWallet"
+  }
+
+wallet-storage-creds: |
+  {
+    "account": "acapy",
+    "password": "acapy_secret",
+    "admin_account": "acapy",
+    "admin_password": "acapy_secret"
+  }
+
+wallet-allow-insecure-seed: true
+
+#############################################################################
+# Ledger Configuration (cheqd network)
+#############################################################################
+
+# No traditional Indy ledger needed - using cheqd via plugin
+no-ledger: true
+
+#############################################################################
+# Connection & Credential Settings
+#############################################################################
+
+# Connection Settings
+debug-connections: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-messages: true
+monitor-ping: true
+
+# Credential Settings
+debug-credentials: true
+auto-store-credential: true
+auto-respond-credential-proposal: true
+auto-respond-credential-offer: true
+auto-respond-credential-request: true
+preserve-exchange-records: true
+
+# Presentation Settings
+debug-presentations: true
+auto-respond-presentation-proposal: true
+auto-respond-presentation-request: true
+auto-verify-presentation: true
+
+#############################################################################
+# Revocation Configuration
+#############################################################################
+
+# Tails server base URL (if using revocation)
+# tails-server-base-url: http://tails-server:6543
+
+monitor-revocation-notification: true
+notify-revocation: true
+
+#############################################################################
+# PQC-Specific Settings
+#############################################################################
+
+# PQC settings are loaded via pqcrypto_fm plugin
+# Default signature algorithm: ML-DSA-65
+# Default KEM algorithm: ML-KEM-768
+# Hybrid mode: enabled
+
+#############################################################################
+# Logging Configuration
+#############################################################################
+
+log-level: info
+log-file: /tmp/issuer.log
+
+# Enhanced logging for debugging
+# log-level: debug
+# trace-target: log
+# trace-tag: issuer
+# trace-label: issuer.events
+
+#############################################################################
+# Performance & Security Settings
+#############################################################################
+
+# Emit new DIDs using PQC keys by default
+create-revocation-transactions: false
+
+# WebSocket keepalive
+ws-heartbeat: 30
+ws-timeout: 60
+
+# Connection invitation settings
+public-invites: true
+requests-through-public-did: true
+
+# Timing settings for long-running PQC operations
+# webhook-timeout-seconds: 120
+
+#############################################################################
+# Webhook Configuration (Optional - for event notifications)
+#############################################################################
+
+# webhook-url: http://issuer-backend:8080/webhooks
+# webhook-timeout: 10
+
+# Specific webhook topics (uncomment as needed)
+# webhook-url-topic-basicmessages: http://issuer-backend:8080/webhooks/basicmessages
+# webhook-url-topic-connections: http://issuer-backend:8080/webhooks/connections
+# webhook-url-topic-credentials: http://issuer-backend:8080/webhooks/credentials
+# webhook-url-topic-presentations: http://issuer-backend:8080/webhooks/presentations
+
+#############################################################################
+# Multitenant Configuration (Disabled for single-tenant setup)
+#############################################################################
+
+# multitenant: false
+# multitenant-admin: false
+# jwt-secret: your-jwt-secret-for-multitenant
+
+#############################################################################
+# Protocol Settings
+#############################################################################
+
+# Supported protocols
+# - connections (RFC 0160)
+# - issue-credential-v1 (RFC 0036)
+# - issue-credential-v2 (RFC 0453)
+# - present-proof-v1 (RFC 0037)
+# - present-proof-v2 (RFC 0454)
+
+# Enable all supported protocols by default
+emit-new-didcomm-prefix: true
+emit-new-didcomm-mime-type: true
+
+#############################################################################
+# Advanced Settings
+#############################################################################
+
+# Endorser support (if using transaction endorsement)
+# endorser-protocol-role: author
+# endorser-alias: transaction_endorser
+
+# DID Exchange mediation
+# mediation-default-id: <mediator-connection-id>
+
+# AnonCreds settings
+# anoncreds-legacy-revocation: false

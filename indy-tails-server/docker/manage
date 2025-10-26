@@ -100,7 +100,7 @@ build)
   ;;
 start|up)
   exportEnvironment "$@"
-  ${dockerCompose} up -d ngrok-tails-server tails-server
+  ${dockerCompose} up -d tails-server pqc-reverseproxy-tails-server
   logs
   echo "Run './manage logs' for logs"
   ;;
@@ -117,7 +117,7 @@ stop)
   ${dockerCompose} stop
   ;;
 down|rm)
-  ${dockerCompose} down
+  ${dockerCompose} down -v
   ;;
 *)
   usage

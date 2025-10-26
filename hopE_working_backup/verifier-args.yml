@@ -1,0 +1,74 @@
+# ACA-Py Configuration for Verifier Agent (Acme)
+# Based on demo/demo-args.yaml structure
+
+# Label für den Agenten
+label: "Verifier Agent"
+
+# Inbound Transport (wird bereits über command line gesetzt, hier zur Referenz)
+# inbound-transport:
+#   - [http, 0.0.0.0, 8040]
+
+# Outbound Transport
+outbound-transport: http
+
+# Admin API Einstellungen
+admin: [0.0.0.0, 8041]
+admin-insecure-mode: true
+
+# Genesis und Ledger
+# genesis-url wird über Umgebungsvariable gesetzt
+
+# Wallet Einstellungen
+wallet-type: askar
+wallet-name: verifier_wallet
+# wallet-key wird über Umgebungsvariable gesetzt
+# wallet-storage-type und credentials werden über Umgebungsvariablen gesetzt
+
+# Auto-Accept Einstellungen (Verifier verifiziert Presentations)
+auto-provision: true
+auto-accept-invites: true
+auto-accept-requests: true
+auto-ping-connection: true
+auto-respond-credential-proposal: false
+auto-respond-credential-offer: false
+auto-respond-credential-request: false
+auto-store-credential: true
+auto-respond-presentation-proposal: false
+auto-respond-presentation-request: false
+auto-verify-presentation: true
+
+# Public Invites
+public-invites: true
+
+# Endpoint URL
+# endpoint wird über Umgebungsvariable gesetzt
+
+# Log Level
+# log-level wird über Umgebungsvariable gesetzt
+
+# Webhook URL
+# webhook-url wird über Umgebungsvariable gesetzt
+
+# Trace Settings (optional, für Debugging)
+# trace: true
+# trace-target: log
+# trace-tag: acapy.verifier
+
+# Debug Modus (optional)
+# debug-connections: true
+# debug-credentials: true
+# debug-presentations: true
+
+# Protokoll-Versionen
+# emit-new-didcomm-prefix: true
+# emit-new-didcomm-mime-type: true
+
+# Monitor für Webhook Events (optional)
+# monitor-ping: true
+
+# Timing Information (optional, für Performance-Analyse)
+# timing: true
+# timing-log: ./timing.log
+
+# Preserve Exchange Records (optional, für Audit)
+# preserve-exchange-records: true

@@ -6,6 +6,19 @@ from typing import Dict, List, Mapping, Optional
 from .error import BaseError
 from .key_type import BLS12381G2, ED25519, P256, X25519, KeyType
 
+# Import PQC key types if available
+try:
+    from ..plugins.pqcrypto_fm.v1_0.key_types import (
+        ML_DSA_44, ML_DSA_65, ML_DSA_87,
+        DILITHIUM2, DILITHIUM3, DILITHIUM5,
+        FALCON_512, FALCON_1024,
+        PQC_SIGNATURE_KEY_TYPES
+    )
+    PQC_AVAILABLE = True
+except ImportError:
+    PQC_AVAILABLE = False
+    PQC_SIGNATURE_KEY_TYPES = []
+
 
 class HolderDefinedDid(Enum):
     """Define if a holder can specify its own did for a given method."""
@@ -65,9 +78,15 @@ SOV = DIDMethod(
     rotation=True,
     holder_defined_did=HolderDefinedDid.ALLOWED,
 )
+# Create INDY DID method with PQC support if available
+_indy_key_types = [ED25519]
+if PQC_AVAILABLE:
+    # Add primary PQC signature algorithms for did:indy
+    _indy_key_types.extend([ML_DSA_65, DILITHIUM3, FALCON_512])
+
 INDY = DIDMethod(
     name="indy",
-    key_types=[ED25519],
+    key_types=_indy_key_types,
     rotation=True,
     holder_defined_did=HolderDefinedDid.ALLOWED,
 )

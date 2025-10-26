@@ -23,6 +23,7 @@ services:
   webserver:
     image: von-network-base
     command: bash -c 'sleep 10 && ./scripts/start_webserver.sh'
+    container_name: von-webserver
     environment:
       - IP=${IP}
       - IPS=${IPS}
@@ -49,8 +50,8 @@ services:
       - INDY_SCAN_TEXT=${INDY_SCAN_TEXT}
     networks:
       - von
-    ports:
-      - ${WEB_SERVER_HOST_PORT:-9000}:8000
+    # ports:
+    #   - ${WEB_SERVER_HOST_PORT:-9000}:8000
     volumes:
       - ./config:/home/indy/config
       - ./server:/home/indy/server
@@ -113,6 +114,7 @@ services:
     ports:
       - 9701:9701
       - 9702:9702
+    container_name: von-node1
     environment:
       - IP=${IP}
       - IPS=${IPS}
@@ -130,6 +132,7 @@ services:
     ports:
       - 9703:9703
       - 9704:9704
+    container_name: von-node2
     environment:
       - IP=${IP}
       - IPS=${IPS}
@@ -147,6 +150,7 @@ services:
     ports:
       - 9705:9705
       - 9706:9706
+    container_name: von-node3
     environment:
       - IP=${IP}
       - IPS=${IPS}
@@ -164,6 +168,7 @@ services:
     ports:
       - 9707:9707
       - 9708:9708
+    container_name: von-node4
     environment:
       - IP=${IP}
       - IPS=${IPS}
@@ -173,8 +178,49 @@ services:
     volumes:
       - node4-data:/home/indy/ledger
 
+  # Post-Quantum Nginx Reverse Proxy für VON Network Webserver
+  pqc-reverseproxy-webserver:
+    build:
+      context: ./pqc_reverseproxy_nginx
+      dockerfile: Dockerfile
+      args:
+        OPENSSL_TAG: openssl-3.5.4
+        LIBOQS_TAG: 0.13.0
+        OQSPROVIDER_TAG: 0.9.0
+        NGINX_VERSION: 1.28.0
+        SIG_ALG: mldsa65
+        DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
+    container_name: von-pqc-reverseproxy-webserver
+    environment:
+      # OpenSSL Configuration
+      - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
+      # Post-Quantum Key Exchange Groups
+      - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
+    networks:
+      - von
+      - reverseproxy
+    ports:
+      - 8000:8000  # HTTPS with Post-Quantum Cryptography (ML-KEM-768)
+    volumes:
+      # Custom nginx configuration for reverse proxy
+      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_webserver.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      # Custom ML-DSA-65 certificates
+      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      # Logs
+      - nginx-logs:/opt/nginx/logs
+    depends_on:
+      - webserver
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
 networks:
   von:
+  reverseproxy:
 
 volumes:
   client-data:
@@ -185,3 +231,4 @@ volumes:
   node3-data:
   node4-data:
   nodes-data:
+  nginx-logs:
