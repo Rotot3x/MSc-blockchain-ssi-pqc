@@ -23,6 +23,7 @@ services:
     command: >
       start
       --label "Issuer Agent"
+      --plugin pqc_didpeer4_fm
       --inbound-transport http 0.0.0.0 8020
       --outbound-transport http
       --endpoint https://host.docker.internal:8020
@@ -73,6 +74,7 @@ services:
     command: >
       start
       --label "Holder Agent"
+      --plugin pqc_didpeer4_fm
       --inbound-transport http 0.0.0.0 8030
       --outbound-transport http
       --endpoint https://host.docker.internal:8030
@@ -120,6 +122,7 @@ services:
     command: >
       start
       --label "Verifier Agent"
+      --plugin pqc_didpeer4_fm
       --inbound-transport http 0.0.0.0 8040
       --outbound-transport http
       --endpoint https://host.docker.internal:8040

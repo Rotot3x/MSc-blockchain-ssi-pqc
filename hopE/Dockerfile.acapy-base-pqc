@@ -41,7 +41,47 @@ RUN ./Configure \
 RUN LD_LIBRARY_PATH=${OPENSSL_PREFIX}/lib64 ${OPENSSL_PREFIX}/bin/openssl version
 
 # =============================================================================
-# Stage 2: ACA-Py Build Stage (Poetry)
+# Stage 2: Build liboqs for PQC support
+# =============================================================================
+FROM debian:bookworm-slim AS liboqs-builder
+
+ARG LIBOQS_VERSION=0.14.0
+ARG LIBOQS_PREFIX=/usr/local
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    libssl-dev \
+    ninja-build \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and build liboqs
+WORKDIR /tmp
+RUN curl -fsSL "https://github.com/open-quantum-safe/liboqs/archive/refs/tags/${LIBOQS_VERSION}.tar.gz" -o liboqs.tar.gz && \
+    tar -xzf liboqs.tar.gz && \
+    rm liboqs.tar.gz
+
+WORKDIR /tmp/liboqs-${LIBOQS_VERSION}
+RUN mkdir build && cd build && \
+    cmake -GNinja \
+    -DCMAKE_INSTALL_PREFIX=${LIBOQS_PREFIX} \
+    -DBUILD_SHARED_LIBS=ON \
+    .. && \
+    ninja && \
+    ninja install
+
+# Verify liboqs installation
+RUN ldconfig && \
+    ls -la ${LIBOQS_PREFIX}/lib/liboqs.* && \
+    echo "liboqs ${LIBOQS_VERSION} built successfully"
+
+# =============================================================================
+# Stage 3: ACA-Py Build Stage (Poetry)
 # =============================================================================
 FROM python:3.12-slim-bookworm AS build
 ARG python_version=3.12
@@ -58,7 +98,7 @@ COPY ./README.md /src
 RUN poetry build
 
 # =============================================================================
-# Stage 3: Main Runtime Image with OpenSSL 3.5.4 PQC
+# Stage 4: Main Runtime Image with OpenSSL 3.5.4 PQC + liboqs
 # =============================================================================
 FROM python:3.12-slim-bookworm AS main
 
@@ -94,6 +134,10 @@ LABEL summary="$SUMMARY" \
 # Copy OpenSSL 3.5.4 from builder stage
 COPY --from=openssl-builder ${OPENSSL_PREFIX} ${OPENSSL_PREFIX}
 
+# Copy liboqs from builder stage
+COPY --from=liboqs-builder /usr/local/lib/liboqs.* /usr/local/lib/
+COPY --from=liboqs-builder /usr/local/include/oqs /usr/local/include/oqs
+
 # Copy PQC Root CA certificate
 COPY hopE/pqc_reverseproxy_nginx/certs/rootCA.crt /usr/local/share/ca-certificates/pqc-root-ca.crt
 
@@ -121,11 +165,12 @@ RUN apt-get update && \
 RUN update-ca-certificates && \
     echo "PQC Root CA imported successfully"
 
-# Replace system OpenSSL with PQC-enabled version
+# Replace system OpenSSL with PQC-enabled version and configure liboqs
 RUN ln -sf ${OPENSSL_PREFIX}/bin/openssl /usr/bin/openssl && \
     ln -sf ${OPENSSL_PREFIX}/lib64/libssl.so.3 /usr/lib/x86_64-linux-gnu/libssl.so.3 && \
     ln -sf ${OPENSSL_PREFIX}/lib64/libcrypto.so.3 /usr/lib/x86_64-linux-gnu/libcrypto.so.3 && \
     echo "${OPENSSL_PREFIX}/lib64" > /etc/ld.so.conf.d/openssl-pqc.conf && \
+    echo "/usr/local/lib" > /etc/ld.so.conf.d/liboqs.conf && \
     ldconfig
 
 # Link OpenSSL's cert directory to system certs (for Python ssl module)
@@ -181,5 +226,11 @@ RUN acapy_agent_package=$(find ./ -name "acapy_agent*.whl" | head -n 1) && \
     pip install --no-cache-dir --find-links=. ${acapy_agent_package}${acapy_reqs} && \
     rm acapy_agent*.whl && \
     chmod +rx $(python -m site --user-site) $HOME/.local
+
+# Install pqc_didpeer4_fm plugin
+COPY --chown=$user:root acapy-plugins/pqc_didpeer4_fm /tmp/pqc_didpeer4_fm
+RUN pip install --no-cache-dir /tmp/pqc_didpeer4_fm && \
+    rm -rf /tmp/pqc_didpeer4_fm && \
+    echo "pqc_didpeer4_fm plugin installed successfully"
 
 ENTRYPOINT ["aca-py"]
