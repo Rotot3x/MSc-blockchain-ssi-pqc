@@ -30,9 +30,9 @@ services:
       dockerfile: docker/Dockerfile.test
 
   # Post-Quantum Nginx Reverse Proxy für Tails Server
-  pqc-reverseproxy-tails-server:
+  pqc-sidecarproxy-tails-server:
     build:
-      context: ./pqc_reverseproxy_nginx
+      context: ./pqc_sidecarproxy_nginx
       dockerfile: Dockerfile
       args:
         OPENSSL_TAG: openssl-3.5.4
@@ -41,7 +41,7 @@ services:
         NGINX_VERSION: 1.28.0
         SIG_ALG: mldsa65
         DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
-    container_name: pqc-reverseproxy-tails-server
+    container_name: pqc-sidecarproxy-tails-server
     environment:
       # OpenSSL Configuration
       - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
@@ -49,14 +49,14 @@ services:
       - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
     networks:
       - tails-server
-      - von_reverseproxy
+      - von_sidecarproxy
     ports:
       - 6543:6543  # HTTPS with Post-Quantum Cryptography (ML-KEM-768)
     volumes:
       # Custom nginx configuration for reverse proxy
-      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_tails-server.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./pqc_sidecarproxy_nginx/nginx-conf/nginx_tails-server.conf:/opt/nginx/nginx-conf/nginx.conf:ro
       # Custom ML-DSA-65 certificates
-      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      - ./pqc_sidecarproxy_nginx/certs:/opt/nginx/certs:ro
       # Logs
       - nginx-logs:/opt/nginx/logs
     depends_on:
@@ -71,7 +71,7 @@ services:
 
 networks:
   tails-server:
-  von_reverseproxy:
+  von_sidecarproxy:
     external: true
 
 volumes:

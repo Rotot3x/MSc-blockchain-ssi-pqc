@@ -116,37 +116,6 @@ Workflow: POST /out-of-band/create-invitation {"use_did_method": "did:peer:4"}
 - **ML-KEM-768** enables encryption ("Only Bob can read this")
 - **Both are required** for secure DIDComm messaging
 
-## 📊 Comparison
-
-### Before Plugin
-
-```json
-{
-  "did": "did:peer:4:z6LSxxx...",
-  "key_type": "ed25519",
-  "metadata": {}
-}
-```
-
-**Vulnerable to Shor's Algorithm on quantum computers!**
-
-### After Plugin
-
-```json
-{
-  "did": "did:peer:4:z6MNxxx...",
-  "key_type": "ml-dsa-65",
-  "metadata": {
-    "pqc_enabled": true,
-    "signature_algorithm": "ml-dsa-65",
-    "key_agreement_algorithm": "ml-kem-768",
-    "plugin": "pqc_didpeer4_fm"
-  }
-}
-```
-
-**Quantum-safe! Resistant to Shor's Algorithm.**
-
 ## 🔧 Technical Details
 
 ### Multicodec Prefixes (Provisional)
@@ -197,13 +166,6 @@ dids = api_get(ISSUER_ADMIN_URL, "/wallet/did")
 - [did:peer:4 Specification](https://identity.foundation/peer-did-method-spec/)
 - [W3C Multicodec Registry](https://w3c-ccg.github.io/multicodec/)
 
-## 🧪 Testing
-
-```bash
-cd tests
-pytest test_integration.py
-```
-
 ## 📝 License
 
 Apache License 2.0
@@ -211,9 +173,3 @@ Apache License 2.0
 ## 👤 Author
 
 Ferris Menzel
-
-## 🙏 Acknowledgments
-
-- NIST Post-Quantum Cryptography Standardization Project
-- Hyperledger Aries Community
-- W3C Credentials Community Group

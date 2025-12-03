@@ -139,7 +139,7 @@ COPY --from=liboqs-builder /usr/local/lib/liboqs.* /usr/local/lib/
 COPY --from=liboqs-builder /usr/local/include/oqs /usr/local/include/oqs
 
 # Copy PQC Root CA certificate
-COPY hopE/pqc_reverseproxy_nginx/certs/rootCA.crt /usr/local/share/ca-certificates/pqc-root-ca.crt
+COPY hopE/pqc_sidecarproxy_nginx/certs/rootCA.crt /usr/local/share/ca-certificates/pqc-root-ca.crt
 
 # Add aries user
 RUN useradd -U -ms /bin/bash -u $uid $user

@@ -4,7 +4,7 @@ This module provides Post-Quantum Cryptography (PQC) support for DIDComm v1
 pack/unpack operations while maintaining compatibility with classical ED25519/X25519.
 
 Classical DIDComm v1:
-    - Uses ED25519 (signatures) → X25519 (ECDH) conversion
+    - Uses ED25519 (signatures) --> X25519 (ECDH) conversion
     - crypto_box (ECDH + XChaCha20-Poly1305) for key exchange
     - Not quantum-safe!
 
@@ -52,8 +52,8 @@ def _is_pqc_key(key: Union[Key, PQCKey]) -> bool:
 def _detect_recipient_key_type(verkey: str) -> str:
     """Detect if a base58 verkey is PQC or classical based on length.
 
-    ML-KEM-768 public keys: 1184 bytes → ~1615 base58 chars
-    ED25519 public keys: 32 bytes → 44 base58 chars
+    ML-KEM-768 public keys: 1184 bytes --> ~1615 base58 chars
+    ED25519 public keys: 32 bytes --> 44 base58 chars
 
     Args:
         verkey: Base58-encoded public key
@@ -228,7 +228,7 @@ async def _pack_pqc(
             # Decode ED25519 public key from base58
             ed_public_bytes = b58_to_bytes(target_vk)
 
-            # Convert ED25519 → X25519 for ECDH
+            # Convert ED25519 --> X25519 for ECDH
             from aries_askar import crypto_box
             target_xk = Key.from_public_bytes(KeyAlg.ED25519, ed_public_bytes).convert_key(KeyAlg.X25519)
 

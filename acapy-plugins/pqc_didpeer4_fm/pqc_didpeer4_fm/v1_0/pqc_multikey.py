@@ -8,7 +8,7 @@ from .key_types import ML_DSA_65, ML_KEM_768
 from .pqc_multicodec import wrap_pqc, unwrap_pqc
 
 
-# Mapping: KeyType → Multicodec name
+# Mapping: KeyType --> Multicodec name
 KEY_TYPE_TO_MULTICODEC = {
     ML_DSA_65.key_type: "ml-dsa-65-pub",
     ML_KEM_768.key_type: "ml-kem-768-pub",
@@ -41,13 +41,13 @@ def key_info_to_multikey(key_info: KeyInfo) -> str:
             f"Supported: {list(KEY_TYPE_TO_MULTICODEC.keys())}"
         )
 
-    # Decode base58 verkey → raw bytes
+    # Decode base58 verkey --> raw bytes
     raw_key = b58decode(key_info.verkey)
 
     # Wrap with PQC multicodec prefix
     multicodec_key = wrap_pqc(codec_name, raw_key)
 
-    # Encode with multibase (base58btc → starts with 'z')
+    # Encode with multibase (base58btc --> starts with 'z')
     multikey = multibase.encode(multicodec_key, "base58btc")
 
     return multikey

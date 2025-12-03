@@ -100,7 +100,7 @@ build)
   ;;
 start|up)
   exportEnvironment "$@"
-  ${dockerCompose} up -d tails-server pqc-reverseproxy-tails-server
+  ${dockerCompose} up -d tails-server pqc-sidecarproxy-tails-server
   logs
   echo "Run './manage logs' for logs"
   ;;

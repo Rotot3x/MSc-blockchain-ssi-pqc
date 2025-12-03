@@ -9,11 +9,11 @@ setup(
     name="pqc_didpeer4_fm",
     version="0.1.0",
     author="Ferris Menzel",
-    author_email="ferris.Menzel@example.com",
+    author_email="admin@example.com",
     description="Post-Quantum did:peer:4 plugin with ML-DSA-65 + ML-KEM-768 for ACA-Py",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ferris-Menzel/pqc_didpeer4_fm",
+    url="",
     packages=find_packages(),
     install_requires=[
         # Note: aries-cloudagent is NOT listed here because this plugin

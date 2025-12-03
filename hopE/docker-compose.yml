@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Issuer Agent (entspricht Faber aus den Demos)
+  # unter command: > --label XY ==>  --plugin pqc_didpeer4_fm ergänzen für PQC
   issuer:
     build:
       context: ..
@@ -53,7 +53,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Holder Agent (entspricht Alice aus den Demos)
+  # unter command: > --label XY ==>  --plugin pqc_didpeer4_fm ergänzen für PQC
   holder:
     build:
       context: ..
@@ -101,7 +101,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Verifier Agent (entspricht Acme aus den Demos)
+  # unter command: > --label XY ==>  --plugin pqc_didpeer4_fm ergänzen für PQC
   verifier:
     build:
       context: ..
@@ -149,9 +149,9 @@ services:
       start_period: 30s
 
   # Post-Quantum Nginx Reverse Proxy für Issuer Agent
-  pqc-reverseproxy-issuer:
+  pqc-sidecarproxy-issuer:
     build:
-      context: ./pqc_reverseproxy_nginx
+      context: ./pqc_sidecarproxy_nginx
       dockerfile: Dockerfile
       args:
         OPENSSL_TAG: openssl-3.5.4
@@ -160,23 +160,23 @@ services:
         NGINX_VERSION: 1.28.0
         SIG_ALG: mldsa65
         DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
-    container_name: pqc-reverseproxy-issuer
+    container_name: pqc-sidecarproxy-issuer
     environment:
       # OpenSSL Configuration
       - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
       # Post-Quantum Key Exchange Groups
       - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
     networks:
-      - von_reverseproxy
+      - von_sidecarproxy
       - hope-issuer
     ports:
       - "8020:8020"  # Issuer Inbound Transport HTTPS (ML-KEM-768)
       - "8021:8021"  # Issuer Admin API HTTPS (ML-KEM-768)
     volumes:
       # Custom nginx configuration for reverse proxy
-      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_issuer.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./pqc_sidecarproxy_nginx/nginx-conf/nginx_issuer.conf:/opt/nginx/nginx-conf/nginx.conf:ro
       # Custom ML-DSA-65 certificates
-      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      - ./pqc_sidecarproxy_nginx/certs:/opt/nginx/certs:ro
       # Logs
       - nginx-logs:/opt/nginx/logs
     depends_on:
@@ -192,9 +192,9 @@ services:
       start_period: 10s
 
  # Post-Quantum Nginx Reverse Proxy für Holder Agent
-  pqc-reverseproxy-holder:
+  pqc-sidecarproxy-holder:
     build:
-      context: ./pqc_reverseproxy_nginx
+      context: ./pqc_sidecarproxy_nginx
       dockerfile: Dockerfile
       args:
         OPENSSL_TAG: openssl-3.5.4
@@ -203,23 +203,23 @@ services:
         NGINX_VERSION: 1.28.0
         SIG_ALG: mldsa65
         DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
-    container_name: pqc-reverseproxy-holder
+    container_name: pqc-sidecarproxy-holder
     environment:
       # OpenSSL Configuration
       - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
       # Post-Quantum Key Exchange Groups
       - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
     networks:
-      - von_reverseproxy
+      - von_sidecarproxy
       - hope-holder
     ports:
       - "8030:8030"  # Holder Inbound Transport HTTPS (ML-KEM-768)
       - "8031:8031"  # Holder Admin API HTTPS (ML-KEM-768)
     volumes:
       # Custom nginx configuration for reverse proxy
-      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_holder.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./pqc_sidecarproxy_nginx/nginx-conf/nginx_holder.conf:/opt/nginx/nginx-conf/nginx.conf:ro
       # Custom ML-DSA-65 certificates
-      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      - ./pqc_sidecarproxy_nginx/certs:/opt/nginx/certs:ro
       # Logs
       - nginx-logs:/opt/nginx/logs
     depends_on:
@@ -235,9 +235,9 @@ services:
       start_period: 10s
 
  # Post-Quantum Nginx Reverse Proxy für Verifier Agent
-  pqc-reverseproxy-verifier:
+  pqc-sidecarproxy-verifier:
     build:
-      context: ./pqc_reverseproxy_nginx
+      context: ./pqc_sidecarproxy_nginx
       dockerfile: Dockerfile
       args:
         OPENSSL_TAG: openssl-3.5.4
@@ -246,23 +246,23 @@ services:
         NGINX_VERSION: 1.28.0
         SIG_ALG: mldsa65
         DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
-    container_name: pqc-reverseproxy-verifier
+    container_name: pqc-sidecarproxy-verifier
     environment:
       # OpenSSL Configuration
       - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
       # Post-Quantum Key Exchange Groups
       - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
     networks:
-      - von_reverseproxy
+      - von_sidecarproxy
       - hope-verifier
     ports:
       - "8040:8040"  # Verifier Inbound Transport HTTPS (ML-KEM-768)
       - "8041:8041"  # Verifier Admin API HTTPS (ML-KEM-768)
     volumes:
       # Custom nginx configuration for reverse proxy
-      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_verifier.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./pqc_sidecarproxy_nginx/nginx-conf/nginx_verifier.conf:/opt/nginx/nginx-conf/nginx.conf:ro
       # Custom ML-DSA-65 certificates
-      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      - ./pqc_sidecarproxy_nginx/certs:/opt/nginx/certs:ro
       # Logs
       - nginx-logs:/opt/nginx/logs
     depends_on:
@@ -281,7 +281,7 @@ networks:
   hope-issuer:
   hope-holder:
   hope-verifier:
-  von_reverseproxy:
+  von_sidecarproxy:
     external: true
 
 volumes:

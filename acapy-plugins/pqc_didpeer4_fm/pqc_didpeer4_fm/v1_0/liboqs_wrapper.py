@@ -1,8 +1,7 @@
 """Direct liboqs-python integration for PQC key generation and operations.
 
 This module provides a wrapper around liboqs-python for generating and using
-ML-DSA-65 (Dilithium3) and ML-KEM-768 (Kyber768) keys without depending on
-the pqcrypto_fm plugin.
+ML-DSA-65 (Dilithium3) and ML-KEM-768 (Kyber768) keys.
 """
 
 import logging

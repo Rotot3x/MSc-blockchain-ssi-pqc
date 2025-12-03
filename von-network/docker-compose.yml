@@ -179,9 +179,9 @@ services:
       - node4-data:/home/indy/ledger
 
   # Post-Quantum Nginx Reverse Proxy für VON Network Webserver
-  pqc-reverseproxy-webserver:
+  pqc-sidecarproxy-webserver:
     build:
-      context: ./pqc_reverseproxy_nginx
+      context: ./pqc_sidecarproxy_nginx
       dockerfile: Dockerfile
       args:
         OPENSSL_TAG: openssl-3.5.4
@@ -190,7 +190,7 @@ services:
         NGINX_VERSION: 1.28.0
         SIG_ALG: mldsa65
         DEFAULT_GROUPS: X25519MLKEM768:mlkem768:x25519:mlkem1024
-    container_name: von-pqc-reverseproxy-webserver
+    container_name: von-pqc-sidecarproxy-webserver
     environment:
       # OpenSSL Configuration
       - OPENSSL_CONF=/opt/openssl/.openssl/ssl/openssl.cnf
@@ -198,14 +198,14 @@ services:
       - DEFAULT_GROUPS=X25519MLKEM768:mlkem768:x25519:mlkem1024
     networks:
       - von
-      - reverseproxy
+      - sidecarproxy
     ports:
       - 8000:8000  # HTTPS with Post-Quantum Cryptography (ML-KEM-768)
     volumes:
       # Custom nginx configuration for reverse proxy
-      - ./pqc_reverseproxy_nginx/nginx-conf/nginx_webserver.conf:/opt/nginx/nginx-conf/nginx.conf:ro
+      - ./pqc_sidecarproxy_nginx/nginx-conf/nginx_webserver.conf:/opt/nginx/nginx-conf/nginx.conf:ro
       # Custom ML-DSA-65 certificates
-      - ./pqc_reverseproxy_nginx/certs:/opt/nginx/certs:ro
+      - ./pqc_sidecarproxy_nginx/certs:/opt/nginx/certs:ro
       # Logs
       - nginx-logs:/opt/nginx/logs
     depends_on:
@@ -220,7 +220,7 @@ services:
 
 networks:
   von:
-  reverseproxy:
+  sidecarproxy:
 
 volumes:
   client-data:

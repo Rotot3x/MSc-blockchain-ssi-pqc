@@ -49,19 +49,19 @@ async def create_pqc_peer4_did(
     kem_key = await wallet.create_key(ML_KEM_768)
 
     # 3. Convert to multikeys
-    sig_multikey = key_info_to_multikey(sig_key)  # → z6MN... (ML-DSA-65)
-    kem_multikey = key_info_to_multikey(kem_key)  # → z6MK768... (ML-KEM-768)
+    sig_multikey = key_info_to_multikey(sig_key)  # --> z6MN... (ML-DSA-65)
+    kem_multikey = key_info_to_multikey(kem_key)  # --> z6MK768... (ML-KEM-768)
 
     # 4. Create KeySpec objects for did:peer:4
-    # NOTE: Order matters! did-peer-4 numbers from 0: key_specs[0] → #key-0, key_specs[1] → #key-1
+    # NOTE: Order matters! did-peer-4 numbers from 0: key_specs[0] --> #key-0, key_specs[1] --> #key-1
     key_specs = [
         KeySpec(
             multikey=sig_multikey,
-            relationships=["authentication", "assertionMethod"]  # → #key-0
+            relationships=["authentication", "assertionMethod"]  # --> #key-0
         ),
         KeySpec(
             multikey=kem_multikey,
-            relationships=["keyAgreement"]  # → #key-1 (used in recipientKeys!)
+            relationships=["keyAgreement"]  # --> #key-1 (used in recipientKeys!)
         ),
     ]
 
@@ -71,7 +71,7 @@ async def create_pqc_peer4_did(
         services.append({
             "id": f"#didcomm-{index}",
             "type": "did-communication",
-            "recipientKeys": ["#key-1"],  # ML-KEM-768 (key agreement/encryption, key_specs[1] → #key-1)
+            "recipientKeys": ["#key-1"],  # ML-KEM-768 (key agreement/encryption, key_specs[1] --> #key-1)
             "routingKeys": routing_keys or [],
             "serviceEndpoint": endpoint,
             "priority": index,
@@ -90,7 +90,7 @@ async def create_pqc_peer4_did(
         "pqc_enabled": True,
         "signature_algorithm": "ml-dsa-65",
         "key_agreement_algorithm": "ml-kem-768",
-        "kem_key_kid": f"{did}#key-1",  # KEM key is key_specs[1] → #key-1
+        "kem_key_kid": f"{did}#key-1",  # KEM key is key_specs[1] --> #key-1
         "plugin": "pqc_didpeer4_fm",
         "version": "0.1.0",
     })
@@ -108,7 +108,7 @@ async def create_pqc_peer4_did(
     await wallet.store_did(did_info)
 
     # 10. Assign Key IDs - did-peer-4 numbers from 0!
-    await wallet.assign_kid_to_key(sig_key.verkey, f"{did}#key-0")  # key_specs[0] → #key-0
-    await wallet.assign_kid_to_key(kem_key.verkey, f"{did}#key-1")  # key_specs[1] → #key-1
+    await wallet.assign_kid_to_key(sig_key.verkey, f"{did}#key-0")  # key_specs[0] --> #key-0
+    await wallet.assign_kid_to_key(kem_key.verkey, f"{did}#key-1")  # key_specs[1] --> #key-1
 
     return did_info
