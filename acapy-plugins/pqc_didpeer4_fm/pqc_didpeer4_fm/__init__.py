@@ -19,6 +19,7 @@ from .v1_0.askar_pqc_patch import (
 from .v1_0.validator_patch import patch_jws_header_kid_for_peer4
 from .v1_0.wallet_patch import get_local_did_for_verkey_pqc
 from .v1_0.connection_target_patch import patch_connection_target_schema
+from .v1_0.wallet_routes_patch import patch_wallet_routes
 
 __version__ = "0.1.0"
 __author__ = "Ferris Menzel"
@@ -93,6 +94,10 @@ async def setup(context: InjectionContext):
     # 5.7. Patch ConnectionTarget schema to accept PQC keys (credential issuance fix)
     patch_connection_target_schema()
     print("   ✅ ConnectionTarget schema patched for PQC key validation")
+
+    # 5.8. Patch /wallet/did/create endpoint for PQC did:peer:4 support
+    patch_wallet_routes()
+    print("   ✅ Wallet routes patched for /wallet/did/create PQC support")
 
     # 6. Apply monkey patches (transparent replacement)
     apply_all_patches()
