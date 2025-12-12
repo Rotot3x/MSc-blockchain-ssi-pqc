@@ -22,6 +22,7 @@ from acapy_agent.protocols.coordinate_mediation.v1_0.models.mediation_record imp
 from .key_types import ML_DSA_65, ML_KEM_768
 from .base_manager_patch import (
     create_did_peer_4_pqc_complete,
+    create_did_peer_4_conditional_pqc,
     _extract_key_material_in_base58_format_pqc,
     long_did_peer_4_to_short_pqc,
     long_did_peer_to_short_pqc,
@@ -126,10 +127,12 @@ def apply_all_patches():
     Called during plugin setup.
     """
 
-    # 1. Patch BaseConnectionManager.create_did_peer_4
-    # This completely replaces the original method to use ML-DSA-65 + ML-KEM-768
-    # instead of ED25519, eliminating ED25519 "ghost DIDs"!
-    BaseConnectionManager.create_did_peer_4 = create_did_peer_4_pqc_complete
+    # 1. Patch BaseConnectionManager.create_did_peer_4 with CRYPTO-AGILE wrapper
+    # KRYPTO-AGILITÄT: Conditional wrapper that checks metadata["key_type"]
+    # - If "ed25519" → Delegates to _original_create_did_peer_4 (pre-plugin behavior)
+    # - Otherwise → Uses ML-DSA-65 + ML-KEM-768 (PQC)
+    # This enables mixed environments where ED25519 and PQC can coexist!
+    BaseConnectionManager.create_did_peer_4 = create_did_peer_4_conditional_pqc
 
     # 2. Patch BaseConnectionManager._extract_key_material_in_base58_format
     # CRITICAL: This allows out-of-band invitation creation to work with PQC keys

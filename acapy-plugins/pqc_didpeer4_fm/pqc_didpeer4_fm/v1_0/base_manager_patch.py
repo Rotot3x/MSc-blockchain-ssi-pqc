@@ -162,6 +162,40 @@ async def create_did_peer_4_pqc_complete(
     return did_info
 
 
+async def create_did_peer_4_conditional_pqc(
+    self,
+    svc_endpoints: Optional[Sequence[str]] = None,
+    mediation_records: Optional[List[MediationRecord]] = None,
+    metadata: Optional[Dict] = None,
+) -> DIDInfo:
+    """Conditional wrapper: Use PQC or original ED25519 based on metadata.
+    """
+    from acapy_agent.connections.base_manager import BaseConnectionManager
+
+    # Check: Wurde ED25519 explizit gewünscht?
+    if metadata and metadata.get("key_type") == "ed25519":
+        LOGGER.info("🔓 Kryptoagilität: ED25519 gewünscht → Nutze Original-ACA-Py (KEIN Plugin-Patch)")
+        # Delegation an ursprüngliche ACA-Py-Implementierung ohne Plugin-Eingriff
+        # Die Original-Funktion wurde gesichert bevor das Plugin sie überschrieben hat
+        from . import monkey_patches
+        if hasattr(monkey_patches, '_original_create_did_peer_4'):
+            return await monkey_patches._original_create_did_peer_4(
+                self, svc_endpoints, mediation_records, metadata
+            )
+        else:
+            # Fallback: Rufe die aktuelle Implementierung auf (sollte nicht passieren)
+            LOGGER.warning("Original create_did_peer_4 nicht gefunden, nutze aktuelle Implementierung")
+            return await BaseConnectionManager.create_did_peer_4(
+                self, svc_endpoints, mediation_records, metadata
+            )
+
+    # Default: Nutze PQC
+    LOGGER.info("🔐 Kryptoagilität: PQC-Algorithmen (ML-DSA-65 + ML-KEM-768)")
+    return await create_did_peer_4_pqc_complete(
+        self, svc_endpoints, mediation_records, metadata
+    )
+
+
 def _extract_key_material_in_base58_format_pqc(method) -> str:
     """Patched version of BaseConnectionManager._extract_key_material_in_base58_format.
 
